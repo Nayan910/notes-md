@@ -1,0 +1,54 @@
+Category,Resource,Version,Status,Path/Notes
+RUNTIME,Node.js,v22.20.0,Installed,C:\Program Files\nodejs
+RUNTIME,npm,11.12.1,Installed,Part of Node.js
+RUNTIME,Python,3.13.7,Installed,C:\Users\nayan\AppData\Local\Programs\Python
+RUNTIME,pip,26.0.1,Installed,Part of Python
+RUNTIME,Git,2.53.0,Installed,C:\Program Files\Git
+RUNTIME,Chocolatey,2.5.1,Installed,Windows package manager
+RUNTIME,VS Code,1.114.0,Installed,
+SDK,Flutter,3.38.9,Installed (E:\),E:\apps\flutter\flutter\bin
+SDK,Dart,3.10.8,Installed (bundled with Flutter),E:\apps\flutter\flutter\bin
+TOOL,VS Code Extensions - Dart,N/A,Installed,dart-code.dart-code
+TOOL,VS Code Extensions - Flutter,N/A,Installed,dart-code.flutter
+TOOL,VS Code Extensions - Python,N/A,Installed,ms-python.python
+TOOL,VS Code Extensions - GitHub Copilot,N/A,Installed,github.copilot-chat
+TOOL,VS Code Extensions - OpenCode,N/A,Installed,sst-dev.opencode
+npm CACHE,vite,5.4.21,Available in npm cache,
+npm CACHE,react,18.3.1,Available in npm cache,
+npm CACHE,react-dom,18.3.1,Available in npm cache,
+npm CACHE,react-markdown,9.1.0,Available in npm cache,
+npm CACHE,react-refresh,0.17.0,Available in npm cache,
+npm CACHE,remark-gfm,4.0.1,Available in npm cache,
+npm CACHE,remark-math,6.0.0,Available in npm cache,
+npm CACHE,remark-parse,11.0.0,Available in npm cache,
+npm CACHE,remark-rehype,11.1.2,Available in npm cache,
+npm CACHE,rehype-katex,7.0.1,Available in npm cache,
+npm CACHE,rehype-prism-plus,2.0.2,Available in npm cache,
+npm CACHE,rehype-raw,7.0.0,Available in npm cache,
+npm CACHE,zustand,4.5.7,Available in npm cache,
+npm CACHE,codemirror,6.0.2,Available in npm cache,
+npm CACHE,typescript,5.9.3,Available in npm cache,
+npm CACHE,tailwindcss,3.4.19,Available in npm cache,
+npm CACHE,mermaid,10.9.6,Available in npm cache,
+npm CACHE,katex,0.16.46,Available in npm cache,
+npm CACHE,uuid,14.0.0,Available in npm cache,
+npm CACHE,immer,N/A,Available in npm cache,
+npm CACHE,postcss,8.5.14,Available in npm cache,
+npm CACHE,autoprefixer,N/A,Available in npm cache (likely),
+PYTHON,fastapi,0.135.1,Installed globally,
+PYTHON,Flask,3.1.3,Installed globally,
+PYTHON,beautifulsoup4,4.14.3,Installed globally,
+PYTHON,EbookLib,0.20,Installed globally,
+PYTHON,markitdown,NOT INSTALLED,Need to install,
+PYTHON,uvicorn,NOT INSTALLED,Need to install for FastAPI,
+PYTHON,python-multipart,NOT INSTALLED,Need for file uploads,
+PYTHON,aiofiles,0.7.0,Installed globally,
+DART/FLUTTER,webview_flutter,latest,Not yet added to pubspec,
+DART/FLUTTER,file_picker,latest,Not yet added to pubspec,
+DART/FLUTTER,flutter_inappwebview,latest,Not yet added to pubspec,
+DART/FLUTTER,path_provider,latest,Not yet added to pubspec,
+DART/FLUTTER,shared_preferences,latest,Not yet added to pubspec,
+SYSTEM,CPU,Intel i5-6440HQ @ 2.60GHz,4 cores,8 GB RAM
+SYSTEM,Disk C:,103 GB total,21 GB free,
+SYSTEM,Disk D:,54 GB total,12 GB free,
+SYSTEM,Disk E:,195 GB total,32 GB free,

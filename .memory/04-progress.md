@@ -95,6 +95,18 @@ Not started. Requires CRDT-based sync (probably Yjs or Automerge) over WebRTC. T
 | Web Editor | None | ❌ Untested |
 | Flutter App | None | ❌ Untested |
 
+## 🚀 Future Roadmap
+
+See `07-next-steps.md` for full prioritized list. Highlights:
+- **Alpha release** with APK download
+- VS Code-style UI redesign (warm colors, no blue/purple)
+- Import/export docx/odt/html/txt ↔ md
+- Git-backed sync (user runs server, devices merge)
+- Smart markdown writer (NL → md, TTS, STT)
+- Notes mode (quick capture, offline-first)
+- Built-in AI agent with memory/skills
+- Security audit, testing, auto-update
+
 ## Build Artifacts
 
 | Build | Location | Size |

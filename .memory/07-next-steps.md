@@ -2,54 +2,82 @@
 
 > Priority: P0 = do first, P1 = important, P2 = nice to have
 
-## P0 — Ship Android APK
+## Session 003 Achieved
+- ✅ Android SDK installed (platform 36 + build-tools 36)
+- ✅ JDK 21 installed (E:\apps\jdk-21)
+- ✅ Debug APK built (163MB, at `notes-md-debug.apk`)
+- ✅ Flutter cache moved to E:\apps\flutter-cache (symlinked)
+- ✅ Vite + Backend both verified running
+- ✅ Fixed white screen (removed rehypeRaw crash)
+- ✅ IPs updated to 192.168.1.8
+- ✅ Pandoc export endpoint (md → docx/odt/html/txt/rst/latex/epub)
+- ✅ Storage permissions in AndroidManifest.xml
+- ✅ Git commit + push to Codeberg
 
-**Goal:** Get a working APK on Nayan's phone so the pairing flow can be tested.
+## P0 — Alpha Release & Download
 
-1. **Install JDK 17** — Download and install from https://adoptium.net
-2. **Run `setup-android.ps1`** — Downloads Android SDK CLI tools, installs platform 35
-3. **Update IP addresses** in `pairing.py` and `home_screen.dart` (use `ipconfig` to find local IP)
-4. **Accept Android licenses** — `flutter doctor --android-licenses`
-5. **Build APK** — `flutter build apk --debug`
-6. **Sideload and test** — Open web editor, register, go to /pair, scan QR with phone
+1. **Create GitHub/Codeberg release** with APK binary download
+2. **Build production web bundle** for Flutter to serve locally (stop depending on Vite dev server)
+3. **Bundle APK as downloadable artifact** in repo releases
 
-**Files to touch:**
-- `backend/notes-md-api/pairing.py:22` — update `DEFAULT_SERVER`
-- `apps/notes-md-app/lib/screens/home_screen.dart:14` — update `_webViewUrl`
+## P0 — File Upload Black Screen Fix
 
-## P1 — Fix Config & Polish
+4. **JS bridge approach:** Intercept `<input type="file">` clicks → Flutter file_picker → send base64 back via JavaScript bridge
+5. Currently blocked by flutter_inappwebview v6.1.5 lacking `onFileChooser`
 
-7. **Move JWT secret to environment variable** — `auth.py:19` → `os.getenv("JWT_SECRET")`
-8. **Make API URL configurable** — `AuthContext.tsx:14` → env var or build-time config
-9. **Set up CORS properly** — `main.py` has `allow_origins=["*"]`, lock it down for production
-10. **Add rate limiting** — slowloris protection on auth endpoints
+## P1 — UI/UX Overhaul (VS Code-style)
 
-## P1 — Web Editor Polish
+6. **Web editor redesign:** Tab bar, activity bar, sidebar, status bar layout (like VS Code)
+7. **Color palette:** Warm colors, boutique feel, NO purple/blue gradients, NO perfect box shadows
+8. **App logo:** Design and add logo to Flutter app + web editor
+9. **Material 3 polish:** Bottom nav (Editor, Files, Settings), edge-to-edge
 
-11. **Mobile responsive** — LoginPage and PairPage might need responsive tweaks
-12. **Remember last session** — Auth redirect currently goes to root, should restore last workspace
-13. **Error boundaries** — Catch React errors instead of white screen
-14. **Pairing feedback** — Audio/vibration feedback when QR is scanned on web side
+## P1 — Import/Export Multiple Formats
 
-## P2 — Flutter Polish
+10. **Frontend UI** for import: file picker → upload to `/convert/file` → opens in editor
+11. **Frontend UI** for export: Save As dialog → `/convert/export` → download as docx/odt/html/txt
+12. Import .txt, .docx, .odt, .html, .pdf, .csv, .json, .xml, images (MarkItDown already supports all)
+13. Export as .docx, .odt, .html, .txt, .rst, .latex, .epub (pandoc endpoint done)
 
-15. **Bottom navigation** — Tab-based UI: Editor, Files, Settings (Material 3)
-16. **Local files only mode** — Allow using the app without pairing (offline-first)
-17. **Android edge-to-edge** — Draw behind system bars with scrim
-18. **Adaptive layout** — Phone = single pane, foldable = dual pane
+## P1 — Git-backed Sync
 
-## P2 — Testing
+14. **User runs server on their machine** (simple script to start backend)
+15. **Other devices connect** to the server IP and sync documents
+16. **Conflict resolution:** CRDT-based merging when both devices are online
+17. **Auto-detect** when server is available vs offline (local-first)
 
-19. **Backend tests** — `pytest` with `httpx` for async API testing
-20. **Web editor tests** — Vitest + React Testing Library
-21. **Flutter tests** — Widget tests for screens
+## P2 — Smart Markdown Writer
 
-## P2 — Phase 4: P2P Sync
+18. **Natural language → formatted .md:** User types plain text, app converts to proper markdown
+19. **TTS (Text-to-Speech):** Read markdown content aloud with formatting awareness
+20. **STT (Speech-to-Text):** Dictate notes, auto-formatted as markdown
 
-22. **Research CRDT library** — Yrs (Rust/WASM) vs Automerge vs custom
-23. **Design sync protocol** — How documents are reconciled between devices
-24. **WebRTC signalling** — Use FastAPI as signalling server or embedded WebSocket
-25. **Implement sync layer** — Integrate into the editor state
+## P2 — Notes Mode
+
+21. **Quick capture mode:** Open app, start typing notes immediately (no pairing/setup needed)
+22. **Local-only mode:** Work fully offline, sync when server available
+23. **Minimal UI:** Distraction-free writing interface
+
+## P2 — Built-in AI Agent
+
+24. **AI that sees the editor content** and can suggest edits, fix formatting, answer questions
+25. **Memory/learning:** AI remembers user patterns and builds skills over time
+26. **Multiple backends:** Free API key input, or local model, or OpenCode plugin
+27. **Privacy:** All AI processing local or user-controlled — no cloud
+
+## P2 — Security & Quality
+
+28. **Audit for sensitive info client-side** — ensure no secrets in localStorage or JS bundles
+29. **Error boundaries** everywhere (catch rendering errors gracefully)
+30. **Backend tests** (pytest + httpx), web tests (Vitest), Flutter tests
+31. **Rate limiting** on auth endpoints
+32. **JWT secret to env var**, CORS lockdown for production
+
+## P2 — Self-Updating & Distribution
+
+33. **Auto-update mechanism:** Check for new APK version, download and install
+34. **Standard download/update process:** Release channels (alpha/beta/stable)
+35. **Installation script** that sets up everything: JDK, Android SDK, dependencies
 
 ## User Preferences (Design Rules)
 
@@ -58,3 +86,4 @@ When building UI elements, remember Nayan:
 - **Prefers:** warm colors, subtle imperfections, interesting typography, boutique/human-crafted feel
 - **Primary drive:** E: (not C:)
 - **Privacy:** Everything local-first, no cloud
+- **Color palette:** Warm tones, earthy, hand-crafted feel

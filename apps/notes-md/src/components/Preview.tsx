@@ -5,7 +5,6 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import rehypePrism from 'rehype-prism-plus'
-import rehypeRaw from 'rehype-raw'
 import { copyToClipboard } from '../utils/export'
 
 export default function Preview() {
@@ -20,7 +19,7 @@ export default function Preview() {
           <div className="preview">
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkMath]}
-              rehypePlugins={[rehypeKatex, rehypePrism, rehypeRaw]}
+              rehypePlugins={[rehypeKatex, rehypePrism]}
               components={{
                 pre: ({ children, ...props }) => {
                   const codeContent = extractCodeContent(children)

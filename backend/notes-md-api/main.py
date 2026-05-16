@@ -16,6 +16,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+import pypandoc
+
 from markitdown import MarkItDown
 
 from database import init_db
@@ -74,6 +76,18 @@ SUPPORTED_FORMATS = {
     ".md": "Markdown files (passthrough)",
 }
 
+# Export target formats
+EXPORT_FORMATS = {
+    "docx": "Word document",
+    "odt": "OpenDocument text",
+    "html": "HTML document",
+    "txt": "Plain text",
+    "pdf": "PDF document (requires LaTeX)",
+    "epub": "EPUB ebook",
+    "rst": "reStructuredText",
+    "latex": "LaTeX document",
+}
+
 
 class TextConversionRequest(BaseModel):
     """Request body for /convert/text endpoint."""
@@ -96,8 +110,8 @@ async def health():
     """Health check endpoint."""
     return {
         "status": "ok",
-        "version": "1.0.0",
-        "engine": "markitdown",
+        "version": "1.1.0",
+        "engine": "markitdown + pandoc",
     }
 
 
@@ -105,10 +119,14 @@ async def health():
 async def formats():
     """List supported conversion formats."""
     return {
-        "formats": [
+        "import_formats": [
             {"extension": ext, "description": desc}
             for ext, desc in SUPPORTED_FORMATS.items()
-        ]
+        ],
+        "export_formats": [
+            {"format": fmt, "description": desc}
+            for fmt, desc in EXPORT_FORMATS.items()
+        ],
     }
 
 
@@ -208,3 +226,88 @@ async def convert_text(request: TextConversionRequest):
             os.unlink(tmp_path)
         except (OSError, UnboundLocalError):
             pass
+
+
+class ExportRequest(BaseModel):
+    """Request body for /convert/export endpoint."""
+    markdown: str
+    target_format: str  # docx, odt, html, txt, pdf, epub, rst, latex
+    filename: Optional[str] = "document"
+
+
+@app.post("/convert/export")
+async def convert_export(request: ExportRequest):
+    """
+    Export markdown content to another format.
+
+    Target formats: docx, odt, html, txt, pdf, epub, rst, latex
+    Returns the converted file as a download.
+    """
+    if not request.markdown.strip():
+        raise HTTPException(status_code=400, detail="No markdown content provided")
+
+    target = request.target_format.lower()
+    if target not in EXPORT_FORMATS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported export format '{target}'. Supported: {', '.join(EXPORT_FORMATS.keys())}",
+        )
+
+    binary_formats = {"docx", "odt", "epub", "pdf"}
+    is_binary = target in binary_formats
+
+    try:
+        if is_binary:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{target}") as tmp:
+                pypandoc.convert_text(
+                    request.markdown,
+                    target,
+                    format="md",
+                    outputfile=tmp.name,
+                    extra_args=["--wrap=preserve"],
+                )
+                tmp_path = tmp.name
+            with open(tmp_path, "rb") as f:
+                output = f.read()
+        else:
+            output = pypandoc.convert_text(
+                request.markdown,
+                target,
+                format="md",
+                outputfile=None,
+                extra_args=["--wrap=preserve"],
+            )
+
+        from fastapi.responses import Response
+
+        content_type_map = {
+            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "odt": "application/vnd.oasis.opendocument.text",
+            "epub": "application/epub+zip",
+            "pdf": "application/pdf",
+            "html": "text/html",
+            "txt": "text/plain",
+            "rst": "text/plain",
+            "latex": "text/plain",
+        }
+        disposition = "attachment" if is_binary else "inline"
+        return Response(
+            content=output,
+            media_type=content_type_map.get(target, "application/octet-stream"),
+            headers={
+                "Content-Disposition": f'{disposition}; filename="{request.filename}.{target}"'
+            },
+        )
+    except Exception as e:
+        return ConversionResponse(
+            success=False,
+            markdown="",
+            error=f"Export failed: {str(e)}",
+            filename=request.filename,
+        )
+    finally:
+        if is_binary and 'tmp_path' in dir():
+            try:
+                os.unlink(tmp_path)
+            except (OSError, UnboundLocalError):
+                pass

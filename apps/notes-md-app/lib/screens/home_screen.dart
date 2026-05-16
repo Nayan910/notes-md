@@ -12,7 +12,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   InAppWebViewController? _webViewController;
-  final String _webViewUrl = 'http://192.168.1.100:5173';
+  final String _webViewUrl = 'http://192.168.1.8:5173';
   bool _loading = true;
 
   @override
@@ -75,6 +75,9 @@ class _HomeScreenState extends State<HomeScreen> {
               useHybridComposition: true,
               allowFileAccessFromFileURLs: true,
               allowUniversalAccessFromFileURLs: true,
+              allowFileAccess: true,
+              supportMultipleWindows: true,
+              javaScriptCanOpenWindowsAutomatically: true,
             ),
             onWebViewCreated: (controller) {
               _webViewController = controller;

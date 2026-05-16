@@ -54,7 +54,7 @@
 
 ## Phase 2 — Flutter App Shell 🟡
 
-**Status:** Dart code complete, analysis passes (0 errors), builds blocked by SDK
+**Status:** Dart code complete, APK built successfully. File upload black screen still buggy.
 
 - [x] InAppWebView loading the web editor
 - [x] Native toolbar (new, open, save)
@@ -64,7 +64,8 @@
 - [x] QR scanner for device pairing
 - [x] JWT injection into WebView
 - [x] Material 3 theme (light/dark)
-- [ ] **Android build** — needs Android SDK + JDK 17
+- [x] **Android build** — APK built! 163MB debug at `apps/notes-md-app/build/app/outputs/`
+- [ ] **File upload black screen** — onFileChooser not in v6.1.5, needs JS bridge approach
 - [ ] **Windows build** — needs Visual Studio 2022 + C++ workload
 
 ## Phase 3 — FastAPI Backend ✅
@@ -99,4 +100,5 @@ Not started. Requires CRDT-based sync (probably Yjs or Automerge) over WebRTC. T
 | Build | Location | Size |
 |-------|----------|------|
 | Web (Vite) | `apps/notes-md/dist/` | ~3.5 MB (JS + CSS) |
-| Flutter APK | `apps/notes-md-app/build/app/outputs/flutter-apk/` | Not built yet |
+| Flutter APK | `apps/notes-md-app/build/app/outputs/flutter-apk/app-debug.apk` | 163 MB |
+| Flutter APK (copy) | `notes-md-debug.apk` (project root) | 163 MB |

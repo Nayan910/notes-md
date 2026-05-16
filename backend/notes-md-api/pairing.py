@@ -18,7 +18,7 @@ from auth import get_current_user, create_token
 router = APIRouter(prefix="/pair", tags=["pairing"])
 
 # Default server URL — user should configure this to their local IP
-DEFAULT_SERVER = "http://localhost:8000"
+DEFAULT_SERVER = "http://192.168.1.8:8000"
 
 
 @router.post("/generate", response_model=PairGenerateResponse)

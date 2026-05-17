@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
 import 'screens/pair_screen.dart';
+import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/editor_screen.dart';
 
@@ -37,6 +38,7 @@ class NotesMdApp extends StatelessWidget {
       initialRoute: '/loading',
       routes: {
         '/loading': (context) => const _LoadingScreen(),
+        '/login': (context) => const LoginScreen(),
         '/pair': (context) => const PairScreen(),
         '/home': (context) => const HomeScreen(),
         '/editor': (context) => const EditorScreen(),
@@ -69,7 +71,7 @@ class _LoadingScreenState extends State<_LoadingScreen> {
     if (!mounted) return;
 
     Navigator.of(context).pushReplacementNamed(
-      auth.isAuthenticated ? '/editor' : '/pair',
+      auth.isAuthenticated ? '/editor' : '/login',
     );
   }
 

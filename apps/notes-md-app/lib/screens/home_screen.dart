@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (value == 'logout') {
                 await auth.logout();
                 if (context.mounted) {
-                  Navigator.of(context).pushReplacementNamed('/pair');
+                  Navigator.of(context).pushReplacementNamed('/login');
                 }
               } else if (value == 'refresh') {
                 _webViewController?.reload();

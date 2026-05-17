@@ -73,6 +73,66 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Login with username and password.
+  /// POST /auth/login, saves token + user on success.
+  Future<bool> login(String username, String password) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_server/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': username,
+          'password': password,
+        }),
+      );
+      if (res.statusCode != 200) return false;
+
+      final data = jsonDecode(res.body);
+      _token = data['token'];
+      _user = data['user'];
+
+      await _storage.write(key: _tokenKey, value: _token);
+      await _storage.write(key: _userKey, value: jsonEncode(_user));
+      await _storage.write(key: _serverKey, value: _server);
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('login error: $e');
+      return false;
+    }
+  }
+
+  /// Register with username and password.
+  /// POST /auth/register, saves token + user on success.
+  Future<bool> register(String username, String password) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_server/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': username,
+          'password': password,
+        }),
+      );
+      if (res.statusCode != 200) return false;
+
+      final data = jsonDecode(res.body);
+      _token = data['token'];
+      _user = data['user'];
+
+      await _storage.write(key: _tokenKey, value: _token);
+      await _storage.write(key: _userKey, value: jsonEncode(_user));
+      await _storage.write(key: _serverKey, value: _server);
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('register error: $e');
+      return false;
+    }
+  }
+
   /// Logout: clear stored credentials.
   Future<void> logout() async {
     _token = null;

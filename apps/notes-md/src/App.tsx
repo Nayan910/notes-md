@@ -3,6 +3,7 @@ import { useStore } from './store/useStore'
 import Layout from './components/Layout'
 import Bridge from './components/Bridge'
 import ErrorBoundary from './components/ErrorBoundary'
+import UpdateChecker from './components/UpdateChecker'
 import { useTheme } from './hooks/useTheme'
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
     <ErrorBoundary>
       <Bridge />
       <Layout />
+      <UpdateChecker />
     </ErrorBoundary>
   )
 }

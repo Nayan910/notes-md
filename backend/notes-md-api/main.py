@@ -52,6 +52,7 @@ from markitdown import MarkItDown
 from database import init_db
 from auth import router as auth_router
 from pairing import router as pairing_router
+from sync import router as sync_router
 
 # ---------------------------------------------------------------------------
 # Rate limiter (in-memory) — 10 requests/minute per IP on auth endpoints
@@ -173,9 +174,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include auth and pairing routers
+# Include auth, pairing, and sync routers
 app.include_router(auth_router)
 app.include_router(pairing_router)
+app.include_router(sync_router)
 
 md = MarkItDown()
 

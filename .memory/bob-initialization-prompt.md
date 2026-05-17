@@ -21,6 +21,8 @@ The Flutter app is the part that needs the most love right now. We already built
 - FastAPI backend at `http://0.0.0.0:8000` — health check passes, import/export endpoints work via pandoc
 - Web editor renders markdown and preview (rehypeRaw was removed to fix a parse5 crash — we can add it back later with safer handling)
 - API URLs now derive from `window.location` instead of hardcoded localhost (that was a pain to debug)
+- **Backend-powered Import UI** — "Import" button in toolbar sends any file (PDF, DOCX, images, etc.) to `POST /convert/file` and opens the markdown result in the editor
+- **Backend-powered Export** — Export dropdown in toolbar uses `POST /convert/export` for pandoc formats (docx, odt, html, txt, rst, latex, epub)
 
 ### What's Broken / In Progress
 1. **LAN Pairing** — The Flutter app can pair with the web editor over the LAN, but we haven't fully verified it works on a real device over 192.168.*. The host derivation fix is in, but there might be CORS or firewall issues.
@@ -64,6 +66,8 @@ Here's what I need from you, in priority order:
 - `E:\oprncode\project\apps\notes-md\src\components\PairPage.tsx` — Pairing UI
 - `E:\oprncode\project\apps\notes-md\src\components\Preview.tsx` — Markdown preview (rehypeRaw removed)
 - `E:\oprncode\project\backend\notes-md-api\main.py` — FastAPI backend + /convert/export
+- `E:\oprncode\project\apps\notes-md\src\utils\api.ts` — Backend API utility (uploadFile, exportDocument, apiGet, apiPost)
+- `E:\oprncode\project\apps\notes-md\src\components\ExportMenu.tsx` — Export dropdown (local md/html + pandoc formats via backend)
 - `E:\oprncode\project\.memory\07-next-steps.md` — Full roadmap
 
 ## The Bobiverse Rules

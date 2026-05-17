@@ -1,6 +1,8 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useStore } from '../store/useStore'
 import type { ViewMode, LayoutMode } from '../types'
+import { uploadFile } from '../utils/api'
+import ExportMenu from './ExportMenu'
 
 export default function Toolbar() {
   const createDoc = useStore((s) => s.createDoc)
@@ -11,7 +13,10 @@ export default function Toolbar() {
   const updateSettings = useStore((s) => s.updateSettings)
   const layoutMode = useStore((s) => s.settings.layoutMode)
   const setLayoutMode = useStore((s) => s.setLayoutMode)
+  const [importing, setImporting] = useState(false)
+  const [showExport, setShowExport] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   const handleNew = () => createDoc()
 
@@ -35,6 +40,25 @@ export default function Toolbar() {
     }
     reader.readAsText(file)
     e.target.value = ''
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || importing) return
+    setImporting(true)
+    try {
+      const result = await uploadFile('/convert/file', file)
+      if (result.success) {
+        useStore.getState().importDoc(result.markdown, result.title || file.name)
+      } else {
+        console.error('Import failed:', result.error)
+      }
+    } catch (err) {
+      console.error('Import error:', err)
+    } finally {
+      setImporting(false)
+      e.target.value = ''
+    }
   }
 
   const handleSave = () => {
@@ -92,6 +116,24 @@ export default function Toolbar() {
             <polyline points="7 3 7 8 15 8" />
           </svg>
         </button>
+        <button onClick={() => importInputRef.current?.click()} className="toolbar-btn" title="Import file (PDF, DOCX, etc.)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
+        <input ref={importInputRef} type="file" accept=".pdf,.docx,.doc,.pptx,.ppt,.xlsx,.html,.htm,.csv,.json,.xml,.jpg,.jpeg,.png,.gif,.bmp,.svg" onChange={handleImport} className="hidden" />
+        <div className="relative">
+          <button onClick={() => setShowExport(!showExport)} className="toolbar-btn" title="Export as...">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </button>
+          {showExport && <ExportMenu onClose={() => setShowExport(false)} />}
+        </div>
         <div className="w-px h-5 bg-border mx-1" />
         {viewModes.map(({ mode, label, icon }) => (
           <button

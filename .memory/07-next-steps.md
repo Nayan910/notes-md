@@ -2,6 +2,13 @@
 
 > Priority: P0 = do first, P1 = important, P2 = nice to have
 
+## Session 004 Achieved
+- ✅ Created `api.ts` utility for backend calls (uploadFile, exportDocument, apiGet, apiPost)
+- ✅ Added "Import" button to toolbar that uploads any file to `POST /convert/file`
+- ✅ Rewrote ExportMenu with pandoc-powered export via `POST /convert/export`
+- ✅ Import and export working through the toolbar dropdown
+- ✅ Updated bob-initialization-prompt.md with latest state
+
 ## Session 003 Achieved
 - ✅ Android SDK installed (platform 36 + build-tools 36)
 - ✅ JDK 21 installed (E:\apps\jdk-21)
@@ -32,12 +39,12 @@
 8. **App logo:** Design and add logo to Flutter app + web editor
 9. **Material 3 polish:** Bottom nav (Editor, Files, Settings), edge-to-edge
 
-## P1 — Import/Export Multiple Formats
+## ~~P1 — Import/Export Multiple Formats~~ ✅
 
-10. **Frontend UI** for import: file picker → upload to `/convert/file` → opens in editor
-11. **Frontend UI** for export: Save As dialog → `/convert/export` → download as docx/odt/html/txt
-12. Import .txt, .docx, .odt, .html, .pdf, .csv, .json, .xml, images (MarkItDown already supports all)
-13. Export as .docx, .odt, .html, .txt, .rst, .latex, .epub (pandoc endpoint done)
+10. ~~**Frontend UI** for import: file picker → upload to `/convert/file` → opens in editor~~
+11. ~~**Frontend UI** for export: Save As dialog → `/convert/export` → download as docx/odt/html/txt~~
+12. ~~Import .txt, .docx, .odt, .html, .pdf, .csv, .json, .xml, images (MarkItDown already supports all)~~
+13. ~~Export as .docx, .odt, .html, .txt, .rst, .latex, .epub (pandoc endpoint done)~~
 
 ## P1 — Git-backed Sync
 

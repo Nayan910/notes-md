@@ -24,7 +24,9 @@
 - [x] Tabbed document interface
 - [x] File sidebar with rename/delete
 - [x] localStorage persistence + auto-save
-- [x] Toolbar: New, Open, Save, Export
+- [x] Toolbar: New, Open, Save
+- [x] Backend-powered Import (PDF, DOCX, images → markdown)
+- [x] Backend-powered Export (docx, odt, html, txt, rst, latex, epub)
 - [x] Settings modal (font, theme, layout)
 - [x] Status bar (word count, reading time)
 - [x] Welcome screen with keyboard shortcuts

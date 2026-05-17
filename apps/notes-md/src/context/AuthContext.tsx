@@ -23,6 +23,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // H-01/H-02: ⚠️ Plaintext token storage in localStorage.
+  // This is NOT encrypted and is vulnerable to XSS attacks.
+  // For production, migrate to httpOnly cookies or encrypted storage (e.g. via a secure backend).
   // Restore session from localStorage on mount
   useEffect(() => {
     const t = localStorage.getItem('notesmd_token')

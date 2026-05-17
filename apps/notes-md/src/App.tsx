@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useStore } from './store/useStore'
 import Layout from './components/Layout'
 import Bridge from './components/Bridge'
+import ErrorBoundary from './components/ErrorBoundary'
 import { useTheme } from './hooks/useTheme'
 
 export default function App() {
@@ -20,9 +21,9 @@ export default function App() {
   }, [])
 
   return (
-    <>
+    <ErrorBoundary>
       <Bridge />
       <Layout />
-    </>
+    </ErrorBoundary>
   )
 }

@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import type { Settings, LayoutMode } from '../types'
+import { getAIConfig, saveAIConfig, clearAIConfig } from '../utils/ai'
 
 export default function SettingsModal() {
   const isOpen = useStore((s) => s.isSettingsOpen)
@@ -7,11 +9,22 @@ export default function SettingsModal() {
   const updateSettings = useStore((s) => s.updateSettings)
   const toggleSettings = useStore((s) => s.toggleSettings)
   const setLayoutMode = useStore((s) => s.setLayoutMode)
+  const aiConfig = getAIConfig()
+  const [aiEndpoint, setAiEndpoint] = useState(aiConfig?.endpoint || 'https://api.openai.com/v1')
+  const [aiKey, setAiKey] = useState(aiConfig?.apiKey || '')
+  const [aiModel, setAiModel] = useState(aiConfig?.model || 'gpt-4o-mini')
+  const [aiSaved, setAiSaved] = useState(false)
 
   if (!isOpen) return null
 
   const set = (key: keyof Settings, value: unknown) => {
     updateSettings({ [key]: value })
+  }
+
+  const handleSaveAi = () => {
+    saveAIConfig({ endpoint: aiEndpoint, apiKey: aiKey, model: aiModel })
+    setAiSaved(true)
+    setTimeout(() => setAiSaved(false), 2000)
   }
 
   return (
@@ -174,6 +187,44 @@ export default function SettingsModal() {
                   className="rounded border-border"
                 />
               </div>
+            </div>
+          </section>
+        </div>
+
+        {/* AI Assistant */}
+        <div className="px-5">
+          <section>
+            <h3 className="text-sm font-medium text-text-primary mb-3">AI Assistant</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">API Endpoint</label>
+                <input value={aiEndpoint} onChange={(e) => setAiEndpoint(e.target.value)}
+                  placeholder="https://api.openai.com/v1"
+                  className="w-full bg-surface-alt border border-border rounded px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">API Key</label>
+                <input type="password" value={aiKey} onChange={(e) => setAiKey(e.target.value)}
+                  placeholder="sk-..."
+                  className="w-full bg-surface-alt border border-border rounded px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Model</label>
+                <input value={aiModel} onChange={(e) => setAiModel(e.target.value)}
+                  placeholder="gpt-4o-mini"
+                  className="w-full bg-surface-alt border border-border rounded px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent" />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleSaveAi}
+                  className="flex-1 py-1.5 rounded bg-accent text-white text-sm hover:opacity-90 transition-opacity">
+                  {aiSaved ? 'Saved!' : 'Save AI Config'}
+                </button>
+                <button onClick={() => { clearAIConfig(); setAiKey('') }}
+                  className="py-1.5 px-3 rounded bg-surface-alt text-text-secondary text-sm hover:text-red-500 transition-colors">
+                  Clear
+                </button>
+              </div>
+              <p className="text-[10px] text-text-secondary">Compatible with OpenAI, OpenRouter, Ollama, or any OpenAI-compatible API.</p>
             </div>
           </section>
         </div>

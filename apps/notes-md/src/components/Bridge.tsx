@@ -47,6 +47,10 @@ export default function Bridge() {
 
     // Handle messages from Flutter
     const handleMessage = (event: MessageEvent) => {
+      // H-04: Validate message origin - only accept from same origin or trusted WebView sources
+      const trustedOrigins = [window.location.origin, 'file://', 'null']
+      if (!trustedOrigins.includes(event.origin) && !event.origin.startsWith('app://')) return
+
       try {
         const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
         const { type, payload } = msg

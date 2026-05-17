@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
+import type { LayoutMode } from '../types'
 import { useAuth } from '../context/AuthContext'
 import TabBar from './TabBar'
 import Sidebar from './Sidebar'
@@ -102,19 +104,50 @@ function VSCodeLayout() {
   const showSidebar = useStore((s) => s.settings.showSidebar)
   const setLayoutMode = useStore((s) => s.setLayoutMode)
   const toggleSettings = useStore((s) => s.toggleSettings)
+  const updateSettings = useStore((s) => s.updateSettings)
+  const [activePanel, setActivePanel] = useState<'files' | 'search' | 'git' | null>('files')
+
+  const activityItems = [
+    { id: 'files', icon: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z', label: 'Files' },
+    { id: 'search', icon: 'M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-6-6', label: 'Search' },
+    { id: 'git', icon: 'M22 12h-4l-3 9L9 3l-3 9H2', label: 'Source Control' },
+  ] as const
+
+  const activityBar = (
+    <nav className="w-11 bg-surface-alt border-r border-border flex flex-col items-center py-2 gap-1 flex-shrink-0">
+      {activityItems.map(({ id, icon, label }) => (
+        <button key={id} onClick={() => {
+          if (id === 'files') updateSettings({ showSidebar: !showSidebar })
+          setActivePanel(activePanel === id ? null : id as typeof activePanel)
+        }}
+          className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${
+            activePanel === id ? 'text-accent bg-accent/10 border-l-2 border-accent rounded-none' : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+          }`} title={label}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d={icon} /></svg>
+        </button>
+      ))}
+      <div className="flex-1" />
+      <div className="flex flex-col items-center gap-1 pt-2 border-t border-border w-full">
+        {(['classic', 'vscode', 'notes'] as LayoutMode[]).map((mode) => (
+          <button key={mode} onClick={() => setLayoutMode(mode)}
+            className={`w-7 h-7 flex items-center justify-center rounded text-[9px] font-bold uppercase transition-colors ${
+              mode === 'vscode' ? 'text-accent bg-accent/10' : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+            }`} title={`${mode} layout`}>
+            {mode === 'classic' ? 'Cl' : mode === 'vscode' ? 'Vs' : 'Nt'}
+          </button>
+        ))}
+      </div>
+      <button onClick={toggleSettings} className="w-8 h-8 flex items-center justify-center rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors mt-1" title="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </nav>
+  )
 
   if (docs.length === 0) {
     return (
       <div className="h-full flex flex-col">
         <div className="flex flex-1 overflow-hidden">
-          <nav className="w-11 bg-surface-alt border-r border-border flex flex-col items-center py-2 gap-2">
-            <button onClick={() => setLayoutMode('classic')} className="w-8 h-8 flex items-center justify-center rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors" title="Switch layout">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-            </button>
-            <button onClick={toggleSettings} className="w-8 h-8 flex items-center justify-center rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors" title="Settings">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            </button>
-          </nav>
+          {activityBar}
           <div className="flex-1 flex items-center justify-center">
             <WelcomeScreen />
           </div>
@@ -129,15 +162,8 @@ function VSCodeLayout() {
   return (
     <div className="h-full flex flex-col">
       <div className="flex flex-1 overflow-hidden">
-        <nav className="w-11 bg-surface-alt border-r border-border flex flex-col items-center py-2 gap-2 flex-shrink-0">
-          <button onClick={() => setLayoutMode('classic')} className="w-8 h-8 flex items-center justify-center rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors" title="Switch layout">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-          </button>
-          <button onClick={toggleSettings} className="w-8 h-8 flex items-center justify-center rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors" title="Settings">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          </button>
-        </nav>
-        {showSidebar && <Sidebar />}
+        {activityBar}
+        {showSidebar && activePanel === 'files' && <Sidebar />}
         <div className="flex-1 flex flex-col overflow-hidden">
           <TabBar />
           <EditorArea />

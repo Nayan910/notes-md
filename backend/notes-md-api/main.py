@@ -6,12 +6,41 @@ and device pairing for the notes.md cross-platform markdown editor.
 """
 
 import os
+import time
 import tempfile
+import logging
 from pathlib import Path
 from typing import Optional
+from collections import defaultdict
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, File, UploadFile, HTTPException
+# ── App version & release notes ──────────────────────────────────────────────
+APP_VERSION = "0.1.0"
+LATEST_VERSION = "0.1.0"
+BUILD_DATE = "2026-05-17"
+APK_DOWNLOAD_PATH = "/download/apk"
+
+RELEASE_NOTES: dict[str, str] = {
+    "0.1.0": (
+        "## v0.1.0 – Alpha release\n"
+        "\n"
+        "Initial release of **notes.md**. Feature highlights:\n"
+        "\n"
+        "- **Document conversion** – Upload PDF, DOCX, PPTX, XLSX, HTML, images, CSVs, and more → markdown\n"
+        "- **Text conversion** – Paste HTML, CSV, or JSON snippets and convert to markdown\n"
+        "- **Export** – Markdown → DOCX, ODT, HTML, TXT, PDF, EPUB, RST, LaTeX\n"
+        "- **Authentication** – OTP-based email login\n"
+        "- **Device pairing** – Pair phone and desktop for seamless workflow\n"
+        "- **Health & formats** – API status and supported format listing\n"
+        "\n"
+        "---\n"
+        "\n"
+        "> **Note:** This is an early alpha. APIs and behavior may change without "
+        "notice."
+    ),
+}
+
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
@@ -24,6 +53,103 @@ from database import init_db
 from auth import router as auth_router
 from pairing import router as pairing_router
 
+# ---------------------------------------------------------------------------
+# Rate limiter (in-memory) — 10 requests/minute per IP on auth endpoints
+# ---------------------------------------------------------------------------
+RATE_LIMIT_WINDOW = 60  # seconds
+RATE_LIMIT_MAX = 10
+
+_rate_store: dict[str, list[float]] = defaultdict(list)
+_last_cleanup: float = time.time()
+
+
+def _clean_rate_store():
+    """Remove entries older than the window."""
+    now = time.time()
+    cutoff = now - RATE_LIMIT_WINDOW
+    expired = []
+    for ip, timestamps in list(_rate_store.items()):
+        _rate_store[ip] = [t for t in timestamps if t > cutoff]
+        if not _rate_store[ip]:
+            expired.append(ip)
+    for ip in expired:
+        del _rate_store[ip]
+
+
+def _is_rate_limited(ip: str) -> bool | int:
+    """
+    Check whether *ip* is rate limited.
+    Returns ``False`` if the request is allowed, or the number of seconds
+    until the client should retry if it is blocked.
+    """
+    now = time.time()
+    cutoff = now - RATE_LIMIT_WINDOW
+
+    timestamps = _rate_store[ip]
+    # Keep only timestamps still inside the window
+    timestamps[:] = [t for t in timestamps if t > cutoff]
+
+    if len(timestamps) >= RATE_LIMIT_MAX:
+        retry_after = int(timestamps[0] + RATE_LIMIT_WINDOW - now) + 1
+        return max(retry_after, 1)
+
+    timestamps.append(now)
+    return False
+
+
+async def rate_limit_middleware(request: Request, call_next):
+    """Apply rate-limiting on auth/pairing endpoints."""
+    global _last_cleanup
+
+    now = time.time()
+    if now - _last_cleanup > 60:
+        _clean_rate_store()
+        _last_cleanup = now
+
+    path = request.url.path
+    if path in ("/auth/register", "/auth/login", "/pair/generate"):
+        client_ip = request.client.host if request.client else "unknown"
+        retry_after = _is_rate_limited(client_ip)
+        if retry_after is not False:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too Many Requests — please slow down"},
+                headers={"Retry-After": str(retry_after)},
+            )
+
+    return await call_next(request)
+
+
+# ---------------------------------------------------------------------------
+# JWT secret from environment (with dev fallback)
+# ---------------------------------------------------------------------------
+JWT_SECRET = os.environ.get("JWT_SECRET")
+if JWT_SECRET is None:
+    JWT_SECRET = "notesmd-dev-secret-change-in-production"
+    logging.warning(
+        "JWT_SECRET environment variable is not set — using development default. "
+        "Set JWT_SECRET in production!"
+    )
+else:
+    logging.info("JWT_SECRET loaded from environment variable.")
+
+ALGORITHM = "HS256"
+
+# ---------------------------------------------------------------------------
+# CORS origins from environment (comma-separated list)
+# ---------------------------------------------------------------------------
+_cors_env = os.environ.get("CORS_ORIGINS")
+if _cors_env:
+    CORS_ORIGINS = [origin.strip() for origin in _cors_env.split(",")]
+else:
+    CORS_ORIGINS = ["*"]
+    logging.warning(
+        "CORS_ORIGINS not set — allowing all origins (*). "
+        "Set CORS_ORIGINS as a comma-separated list in production!"
+    )
+
+logging.info("Allowed CORS origins: %s", CORS_ORIGINS)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,13 +161,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="notes.md API",
     description="Document conversion, auth, and device pairing for notes.md",
-    version="1.1.0",
+    version=APP_VERSION,
     lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -105,12 +231,90 @@ class ConversionResponse(BaseModel):
     error: Optional[str] = None
 
 
+# ── Version & update endpoints ────────────────────────────────────────────────
+
+
+@app.get("/version")
+async def version():
+    """Return the current app version and build metadata."""
+    return {
+        "version": APP_VERSION,
+        "build_date": BUILD_DATE,
+        "android_apk_url": APK_DOWNLOAD_PATH,
+    }
+
+
+@app.get("/update/check")
+async def update_check(current_version: str = "0.0.0"):
+    """Check whether a newer version is available."""
+    update_available = _compare_versions(current_version, LATEST_VERSION) < 0
+    return {
+        "update_available": update_available,
+        "latest_version": LATEST_VERSION,
+        "download_url": APK_DOWNLOAD_PATH,
+        "release_notes": "Alpha release of notes.md",
+    }
+
+
+@app.get("/update/notes")
+async def update_notes(version: str = APP_VERSION):
+    """Return release notes for a given version.
+
+    If *version* is not found in the release-notes catalog, returns a
+    fallback message.
+    """
+    notes = RELEASE_NOTES.get(version)
+    if notes is None:
+        return {
+            "version": version,
+            "found": False,
+            "release_notes": f"No release notes available for version {version}.",
+        }
+    return {
+        "version": version,
+        "found": True,
+        "release_notes": notes,
+    }
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+
+def _compare_versions(a: str, b: str) -> int:
+    """Compare two semver-like strings.
+
+    Returns:
+        -1 if *a* < *b*, 0 if equal, 1 if *a* > *b*.
+    """
+    def _parts(v: str):
+        try:
+            return [int(x) for x in v.split(".")]
+        except ValueError:
+            return [0]
+
+    pa, pb = _parts(a), _parts(b)
+    # Pad shorter list with zeros
+    length = max(len(pa), len(pb))
+    pa.extend([0] * (length - len(pa)))
+    pb.extend([0] * (length - len(pb)))
+
+    for x, y in zip(pa, pb):
+        if x < y:
+            return -1
+        if x > y:
+            return 1
+    return 0
+
+
+# ── Core endpoints ────────────────────────────────────────────────────────────
+
+
 @app.get("/health")
 async def health():
     """Health check endpoint."""
     return {
         "status": "ok",
-        "version": "1.1.0",
+        "version": APP_VERSION,
         "engine": "markitdown + pandoc",
     }
 

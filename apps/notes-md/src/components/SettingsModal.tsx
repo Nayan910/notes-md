@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import type { Settings, LayoutMode } from '../types'
-import { getAIConfig, saveAIConfig, clearAIConfig } from '../utils/ai'
+import { getAIConfig, saveAIConfig, clearAIConfig, getAISkills, saveAISkills, resetAISkills } from '../utils/ai'
 
 export default function SettingsModal() {
   const isOpen = useStore((s) => s.isSettingsOpen)
@@ -14,6 +14,8 @@ export default function SettingsModal() {
   const [aiKey, setAiKey] = useState(aiConfig?.apiKey || '')
   const [aiModel, setAiModel] = useState(aiConfig?.model || 'gpt-4o-mini')
   const [aiSaved, setAiSaved] = useState(false)
+  const [aiSkills, setAiSkills] = useState(getAISkills())
+  const [skillsSaved, setSkillsSaved] = useState(false)
 
   if (!isOpen) return null
 
@@ -25,6 +27,17 @@ export default function SettingsModal() {
     saveAIConfig({ endpoint: aiEndpoint, apiKey: aiKey, model: aiModel })
     setAiSaved(true)
     setTimeout(() => setAiSaved(false), 2000)
+  }
+
+  const handleSaveSkills = () => {
+    saveAISkills(aiSkills)
+    setSkillsSaved(true)
+    setTimeout(() => setSkillsSaved(false), 2000)
+  }
+
+  const handleResetSkills = () => {
+    resetAISkills()
+    setAiSkills('You are a helpful markdown writing assistant.')
   }
 
   return (
@@ -223,6 +236,27 @@ export default function SettingsModal() {
                   className="py-1.5 px-3 rounded bg-surface-alt text-text-secondary text-sm hover:text-red-500 transition-colors">
                   Clear
                 </button>
+              </div>
+              <div className="mt-4">
+                <label className="block text-xs text-text-secondary mb-1">Custom Instructions</label>
+                <textarea
+                  value={aiSkills}
+                  onChange={(e) => setAiSkills(e.target.value)}
+                  placeholder="You are a helpful markdown writing assistant."
+                  rows={3}
+                  className="w-full bg-surface-alt border border-border rounded px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent resize-none"
+                />
+                <div className="flex gap-2 mt-2">
+                  <button onClick={handleSaveSkills}
+                    className="flex-1 py-1.5 rounded bg-surface-alt text-text-primary text-sm hover:bg-surface-hover transition-colors">
+                    {skillsSaved ? 'Saved!' : 'Save Instructions'}
+                  </button>
+                  <button onClick={handleResetSkills}
+                    className="py-1.5 px-3 rounded bg-surface-alt text-text-secondary text-sm hover:text-red-500 transition-colors">
+                    Reset
+                  </button>
+                </div>
+                <p className="text-[10px] text-text-secondary mt-1">These instructions are used as the AI's system prompt.</p>
               </div>
               <p className="text-[10px] text-text-secondary">Compatible with OpenAI, OpenRouter, Ollama, or any OpenAI-compatible API.</p>
             </div>

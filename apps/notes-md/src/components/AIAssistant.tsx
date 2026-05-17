@@ -1,15 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
 import { useStore } from '../store/useStore'
-import { askAI, formatAsMarkdown, getAIConfig } from '../utils/ai'
+import { askAI, formatAsMarkdown, getAIConfig, getConversationHistory, saveConversationHistory, clearConversationHistory, getAISkills, type ChatMessage } from '../utils/ai'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  timestamp?: number
 }
 
 export default function AIAssistant() {
   const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const history = getConversationHistory()
+    return history.map(msg => ({ role: msg.role, content: msg.content, timestamp: msg.timestamp }))
+  })
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [smartMode, setSmartMode] = useState(false)
@@ -17,22 +21,35 @@ export default function AIAssistant() {
   const doc = activeDocId ? useStore.getState().getDoc(activeDocId) : undefined
   const endRef = useRef<HTMLDivElement>(null)
   const configured = !!getAIConfig()
+  const customSkills = getAISkills()
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  // Save history whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      const history: ChatMessage[] = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp || Date.now()
+      }))
+      saveConversationHistory(history)
+    }
+  }, [messages])
 
   const handleSend = async () => {
     if (!input.trim() || loading) return
     const userMsg = input.trim()
     setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: userMsg }])
+    setMessages(prev => [...prev, { role: 'user', content: userMsg, timestamp: Date.now() }])
     setLoading(true)
     try {
       const context = doc ? `Current document content:\n\n${doc.content.slice(0, 3000)}` : ''
-      const systemPrompt = `You are a markdown editing assistant. Help the user write, edit, and format markdown. ${context ? `Here is the current document context:\n${context}` : ''}`
+      const systemPrompt = `${customSkills} ${context ? `Current document context:\n${context}` : ''}`
       const reply = await askAI(userMsg, systemPrompt)
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+      setMessages(prev => [...prev, { role: 'assistant', content: reply, timestamp: Date.now() }])
     } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }])
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}`, timestamp: Date.now() }])
     } finally {
       setLoading(false)
     }
@@ -43,14 +60,14 @@ export default function AIAssistant() {
     setSmartMode(true)
     const text = input.trim()
     setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: `Format this as markdown:\n${text}` }])
+    setMessages(prev => [...prev, { role: 'user', content: `Format this as markdown:\n${text}`, timestamp: Date.now() }])
     setLoading(true)
     try {
       const formatted = await formatAsMarkdown(text)
       useStore.getState().updateDoc(activeDocId, formatted)
-      setMessages(prev => [...prev, { role: 'assistant', content: '✅ Formatted and inserted into the editor.' }])
+      setMessages(prev => [...prev, { role: 'assistant', content: '✅ Formatted and inserted into the editor.', timestamp: Date.now() }])
     } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }])
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}`, timestamp: Date.now() }])
     } finally {
       setLoading(false)
       setSmartMode(false)
@@ -60,6 +77,11 @@ export default function AIAssistant() {
   const applyToEditor = (content: string) => {
     if (!activeDocId) return
     useStore.getState().updateDoc(activeDocId, content)
+  }
+
+  const handleClearHistory = () => {
+    clearConversationHistory()
+    setMessages([])
   }
 
   if (!open) {
@@ -82,6 +104,11 @@ export default function AIAssistant() {
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
         <span className="text-sm font-medium text-text-primary">AI Assistant</span>
         <div className="flex items-center gap-1">
+          {messages.length > 0 && (
+            <button onClick={handleClearHistory} className="text-[10px] text-text-secondary hover:text-red-500 px-1" title="Clear history">
+              Clear
+            </button>
+          )}
           {!configured && (
             <span className="text-[10px] text-red-500">Not configured</span>
           )}

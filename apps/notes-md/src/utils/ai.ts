@@ -2,6 +2,16 @@
 // This is NOT encrypted and is vulnerable to XSS attacks.
 // For production, migrate to encrypted storage (e.g. via a secure backend proxy that injects the key).
 const AI_CONFIG_KEY = 'notes-md-ai-config'
+const AI_HISTORY_KEY = 'notes-md-ai-history'
+const AI_SKILLS_KEY = 'notes-md-ai-skills'
+const MAX_HISTORY_MESSAGES = 50
+const DEFAULT_SKILLS = 'You are a helpful markdown writing assistant.'
+
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: number
+}
 
 export interface AIConfig {
   endpoint: string
@@ -25,6 +35,46 @@ export function saveAIConfig(config: AIConfig) {
 
 export function clearAIConfig() {
   localStorage.removeItem(AI_CONFIG_KEY)
+}
+
+// Conversation History Functions
+export function getConversationHistory(): ChatMessage[] {
+  try {
+    const raw = localStorage.getItem(AI_HISTORY_KEY)
+    if (!raw) return []
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
+}
+
+export function saveConversationHistory(messages: ChatMessage[]) {
+  // Keep only the last MAX_HISTORY_MESSAGES
+  const trimmed = messages.slice(-MAX_HISTORY_MESSAGES)
+  localStorage.setItem(AI_HISTORY_KEY, JSON.stringify(trimmed))
+}
+
+export function clearConversationHistory() {
+  localStorage.removeItem(AI_HISTORY_KEY)
+}
+
+// AI Skills/Instructions Functions
+export function getAISkills(): string {
+  try {
+    const raw = localStorage.getItem(AI_SKILLS_KEY)
+    if (!raw) return DEFAULT_SKILLS
+    return raw
+  } catch {
+    return DEFAULT_SKILLS
+  }
+}
+
+export function saveAISkills(skills: string) {
+  localStorage.setItem(AI_SKILLS_KEY, skills)
+}
+
+export function resetAISkills() {
+  localStorage.removeItem(AI_SKILLS_KEY)
 }
 
 export async function askAI(prompt: string, systemPrompt?: string): Promise<string> {

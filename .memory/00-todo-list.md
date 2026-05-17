@@ -16,6 +16,17 @@
 - [x] Export UI — toolbar dropdown → pandoc-powered export + download
 - [x] Bob initialization prompt created
 - [x] Git push to Codeberg verified working
+- [x] Error boundaries — catch rendering crashes, prevent white screen
+- [x] Smart markdown writer — AI assistant with Smart Write (plain text → formatted .md)
+- [x] TTS (Text-to-Speech) — SpeechBar with Web Speech API, read aloud with formatting awareness
+- [x] STT (Speech-to-Text) — Dictate notes via Web Speech API, inserted into editor
+- [x] Notes mode — Distraction-free, minimalist UI, centered editor
+- [x] Logo design — SVG logo + favicon in index.html
+- [x] Built-in AI agent — Chat panel, sees editor content, suggests edits, Apply to Editor
+- [x] AI agent backends — Configurable API endpoint, key (masked), model in Settings
+- [x] Security audit — Full audit report with H/M/L findings + remediation
+- [x] Backend tests — 68 tests across all 12 endpoints (pytest)
+- [x] Web tests — 79 tests across 5 test files (Vitest + Testing Library)
 
 ---
 
@@ -24,30 +35,20 @@
 - [ ] **Verify LAN pairing end-to-end** — AuthContext + PairPage host derivation on 192.168.1.x, CORS, Windows firewall rules
 - [ ] **Fix QR scanning on device** — Runtime camera permission handling in Flutter, fallback manual code entry
 - [ ] **Create alpha release** — APK attached to Codeberg release, downloadable artifact
-- [ ] **Add React error boundaries** — Catch rendering crashes, prevent white screen
 
 ## P1 — Core Features
 
-- [ ] **Smart markdown writer** — Type plain text, app converts to formatted .md
-- [ ] **TTS (Text-to-Speech)** — Read markdown aloud with formatting awareness
-- [ ] **STT (Speech-to-Text)** — Dictate notes, auto-formatted as markdown
-- [ ] **Notes mode** — Quick capture, offline-first, minimal UI
-- [ ] **Logo design** — App logo for Flutter + web editor
 - [ ] **Standard download/update process** — Auto-update check, release channels (alpha/beta/stable)
+- [ ] **AI memory/learning** — AI remembers user patterns and builds skills over time
+- [ ] **Privacy-first AI** — All processing local or user-controlled, no cloud
 
 ## P2 — Sync & Distribution
 
 - [ ] **Git-backed sync** — User runs server, other devices connect, CRDT merge when both online
-- [ ] **Built-in AI agent** — Sees editor content, suggests edits, fixes formatting, answers questions
-- [ ] **AI agent backends** — Free API key input or local model or OpenCode plugin
-- [ ] **Memory/learning** — AI remembers user patterns and builds skills over time
-- [ ] **Privacy-first AI** — All processing local or user-controlled, no cloud
+- [ ] **VS Code layout polish** — Full activity bar with proper icons, smooth mode toggle
 
 ## P3 — Security & Quality
 
-- [ ] **Security audit** — Ensure no secrets in localStorage or JS bundles
-- [ ] **Backend tests** — pytest + httpx
-- [ ] **Web tests** — Vitest
 - [ ] **Flutter tests**
 - [ ] **Rate limiting** — On auth endpoints
 - [ ] **JWT secret to env var** — CORS lockdown for production

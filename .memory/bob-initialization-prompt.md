@@ -25,8 +25,9 @@ The Flutter app is the part that needs the most love right now. We already built
 ### What's Broken / In Progress
 1. **LAN Pairing** — The Flutter app can pair with the web editor over the LAN, but we haven't fully verified it works on a real device over 192.168.*. The host derivation fix is in, but there might be CORS or firewall issues.
 2. **QR Scanning** — Camera permission is in the AndroidManifest, but we need runtime permission handling and the scanning flow in `pair_screen.dart` (mobile_scanner) needs testing on actual devices.
-3. **File Upload** — The WebView needs a JS bridge to intercept `<input type="file">` and use Flutter's file_picker instead. flutter_inappwebview v6.1.5 doesn't have onFileChooser, so we need a custom approach.
+3. ~~**File Upload**~~ ✅ **FIXED** — JS bridge intercepts `<input type="file">` clicks in Toolbar.tsx, routes through Flutter's native file_picker, sends content back via bridge.
 4. **QR Scanning Reliability** — Need to add logging, fallback parsing, and runtime camera permission dialogs.
+5. **Git Push Broken** — Codeberg PAT expired. All 3 latest commits are local only.
 
 ### The Stack
 - **Frontend**: Vite + React + TypeScript (`apps/notes-md/`)
@@ -48,12 +49,12 @@ Here's what I need from you, in priority order:
 4. **Create an alpha release** — Attach the debug APK to a repo release on Codeberg. Set up a downloadable artifact.
 
 ### P1 — Should Get Done
-5. **Build production web bundle** — Stop relying on the Vite dev server in the Flutter APK. Build the web app and embed the static files in the Flutter binary. This is how proper hybrid apps work.
+~~5. **Build production web bundle**~~ ✅ **DONE** — dist/ built and embedded in both Android native assets + Flutter assets. Dual-mode loading (dev server in debug, local assets in release).
 6. **Error boundaries** — Add React error boundaries so a rendering crash doesn't give a white screen.
 
 ### P2 — Nice to Have
 7. **Git-backed sync** — Server-side git integration for note sync across devices.
-8. **UX overhaul** — VS Code-like UI, warm color palette (Nayan hates purple/blue gradients and perfect box shadows).
+~~8. **UX overhaul**~~ ✅ **DONE** — VS Code-like UI with 3 layout modes (VS Code/Classic/Notes), warm terracotta/cream palette, no blue or purple anywhere.
 
 ## Key Files You'll Need
 - `E:\oprncode\project\apps\notes-md-app\lib\screens\home_screen.dart` — WebView URL config

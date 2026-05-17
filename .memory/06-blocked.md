@@ -2,7 +2,14 @@
 
 ## 🔴 Critical Blockers (Must Resolve Before Continuing)
 
-### 1. No Android SDK
+### 1. Git Push Credentials Expired
+**Problem:** Codeberg PAT token has expired. Commits (file upload fix, production bundle, UI redesign) are local only.
+```
+remote: Credentials are incorrect or have expired.
+```
+**Fix:** Nayan needs to regenerate a new personal access token on Codeberg and update `~/.git-credentials`.
+
+### 2. No Android SDK
 **Problem:** Flutter can't build APK — `flutter doctor` shows "Unable to locate Android SDK"
 
 **Fix:** Run `setup-android.ps1` or:
@@ -17,7 +24,11 @@
 
 **Fix:** Download from https://adoptium.net/ (Temurin JDK 17). Set `JAVA_HOME`.
 
-### 3. Hardcoded IP Addresses
+### 3. No Codeberg Release v0.1.0-alpha
+**Problem:** Blocked by expired git credentials. APK needs to be published as a release.
+**Fix:** After fixing git credentials: `git tag v0.1.0-alpha && git push origin v0.1.0-alpha && gh release create v0.1.0-alpha notes-md-debug.apk --title "v0.1.0-alpha" --notes "First alpha release"`
+
+### 4. Hardcoded IP Addresses
 **Problem:** Two files have hardcoded IPs that need to be your machine's actual local network IP
 
 **Files to update:**

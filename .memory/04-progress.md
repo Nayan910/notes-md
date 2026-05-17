@@ -12,7 +12,7 @@
 
 ## Phase 1 — Web Editor ✅
 
-**Status:** Feature-complete, builds clean (935 modules, 0 errors)
+**Status:** Feature-complete, builds clean (905 modules, 0 errors). UI redesigned with warm palette + 3 layout modes.
 
 - [x] CodeMirror 6 with markdown syntax highlighting
 - [x] Split view: editor + live preview
@@ -65,7 +65,9 @@
 - [x] JWT injection into WebView
 - [x] Material 3 theme (light/dark)
 - [x] **Android build** — APK built! 163MB debug at `apps/notes-md-app/build/app/outputs/`
-- [ ] **File upload black screen** — onFileChooser not in v6.1.5, needs JS bridge approach
+- [x] **Production web bundle** — dist/ built and copied to Flutter assets + Android native assets
+- [x] **Dual-mode loading** — dev server in debug mode, local assets in release mode
+- [x] **File upload black screen** — Fixed via JS bridge intercept in Toolbar.tsx
 - [ ] **Windows build** — needs Visual Studio 2022 + C++ workload
 
 ## Phase 3 — FastAPI Backend ✅
@@ -98,8 +100,8 @@ Not started. Requires CRDT-based sync (probably Yjs or Automerge) over WebRTC. T
 ## 🚀 Future Roadmap
 
 See `07-next-steps.md` for full prioritized list. Highlights:
-- **Alpha release** with APK download
-- VS Code-style UI redesign (warm colors, no blue/purple)
+- **Alpha release** with APK download (blocked: push credentials expired)
+- ~~VS Code-style UI redesign~~ ✅ DONE (3 layout modes + warm palette)
 - Import/export docx/odt/html/txt ↔ md
 - Git-backed sync (user runs server, devices merge)
 - Smart markdown writer (NL → md, TTS, STT)

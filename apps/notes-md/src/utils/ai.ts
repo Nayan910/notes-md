@@ -17,13 +17,16 @@ export interface AIConfig {
   endpoint: string
   apiKey: string
   model: string
+  mode?: 'cloud' | 'ollama' | 'disabled'
 }
 
 export function getAIConfig(): AIConfig | null {
   try {
     const raw = localStorage.getItem(AI_CONFIG_KEY)
     if (!raw) return null
-    return JSON.parse(raw)
+    const config = JSON.parse(raw)
+    if (!config.mode) config.mode = 'cloud'
+    return config
   } catch {
     return null
   }
@@ -80,6 +83,28 @@ export function resetAISkills() {
 export async function askAI(prompt: string, systemPrompt?: string): Promise<string> {
   const config = getAIConfig()
   if (!config) throw new Error('AI not configured. Add an API key in Settings.')
+  if (config.mode === 'disabled') throw new Error('AI is disabled in Settings.')
+
+  if (config.mode === 'ollama') {
+    const res = await fetch(`${config.endpoint || 'http://localhost:11434'}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: config.model || 'llama3',
+        messages: [
+          { role: 'system', content: systemPrompt || 'You are a helpful assistant.' },
+          { role: 'user', content: prompt },
+        ],
+        stream: false,
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.text()
+      throw new Error(`Ollama error (${res.status}): ${err}. Make sure Ollama is running locally.`)
+    }
+    const data = await res.json()
+    return data.message?.content || ''
+  }
 
   const res = await fetch(`${config.endpoint}/chat/completions`, {
     method: 'POST',

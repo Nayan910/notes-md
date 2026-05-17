@@ -20,6 +20,7 @@ describe('getAIConfig', () => {
       endpoint: 'https://api.openai.com',
       apiKey: 'sk-test-123',
       model: 'gpt-4',
+      mode: 'ollama' as const,
     }
     saveAIConfig(config)
 
@@ -38,7 +39,7 @@ describe('getAIConfig', () => {
   })
 
   it('handles a config with an empty apiKey gracefully', () => {
-    const config = { endpoint: '', apiKey: '', model: '' }
+    const config = { endpoint: '', apiKey: '', model: '', mode: 'cloud' as const }
     saveAIConfig(config)
     expect(getAIConfig()).toEqual(config)
   })
@@ -53,6 +54,7 @@ describe('saveAIConfig', () => {
       endpoint: 'https://example.com',
       apiKey: 'sk-key',
       model: 'claude-3',
+      mode: 'cloud' as const,
     }
     saveAIConfig(config)
 
@@ -61,10 +63,10 @@ describe('saveAIConfig', () => {
   })
 
   it('overwrites any previously stored config', () => {
-    saveAIConfig({ endpoint: 'old', apiKey: 'old', model: 'old' })
-    saveAIConfig({ endpoint: 'new', apiKey: 'new', model: 'new' })
+    saveAIConfig({ endpoint: 'old', apiKey: 'old', model: 'old', mode: 'cloud' })
+    saveAIConfig({ endpoint: 'new', apiKey: 'new', model: 'new', mode: 'ollama' })
 
-    expect(getAIConfig()).toEqual({ endpoint: 'new', apiKey: 'new', model: 'new' })
+    expect(getAIConfig()).toEqual({ endpoint: 'new', apiKey: 'new', model: 'new', mode: 'ollama' })
   })
 
   it('stores the exact values provided', () => {
@@ -72,6 +74,7 @@ describe('saveAIConfig', () => {
       endpoint: 'https://api.test.com/v1',
       apiKey: 'sk-abcdef123456',
       model: 'gpt-4-turbo',
+      mode: 'ollama' as const,
     }
     saveAIConfig(config)
     expect(getAIConfig()).toEqual(config)
@@ -83,7 +86,7 @@ describe('saveAIConfig', () => {
 // ---------------------------------------------------------------------------
 describe('clearAIConfig', () => {
   it('removes the config key from localStorage', () => {
-    saveAIConfig({ endpoint: 'e', apiKey: 'k', model: 'm' })
+    saveAIConfig({ endpoint: 'e', apiKey: 'k', model: 'm', mode: 'cloud' })
     expect(localStorage.getItem(AI_CONFIG_KEY)).not.toBeNull()
 
     clearAIConfig()
@@ -95,11 +98,11 @@ describe('clearAIConfig', () => {
   })
 
   it('allows saving again after clearing', () => {
-    saveAIConfig({ endpoint: 'e1', apiKey: 'k1', model: 'm1' })
+    saveAIConfig({ endpoint: 'e1', apiKey: 'k1', model: 'm1', mode: 'cloud' })
     clearAIConfig()
     expect(getAIConfig()).toBeNull()
 
-    saveAIConfig({ endpoint: 'e2', apiKey: 'k2', model: 'm2' })
-    expect(getAIConfig()).toEqual({ endpoint: 'e2', apiKey: 'k2', model: 'm2' })
+    saveAIConfig({ endpoint: 'e2', apiKey: 'k2', model: 'm2', mode: 'ollama' })
+    expect(getAIConfig()).toEqual({ endpoint: 'e2', apiKey: 'k2', model: 'm2', mode: 'ollama' })
   })
 })

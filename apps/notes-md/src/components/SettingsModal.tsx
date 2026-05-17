@@ -13,6 +13,7 @@ export default function SettingsModal() {
   const [aiEndpoint, setAiEndpoint] = useState(aiConfig?.endpoint || 'https://api.openai.com/v1')
   const [aiKey, setAiKey] = useState(aiConfig?.apiKey || '')
   const [aiModel, setAiModel] = useState(aiConfig?.model || 'gpt-4o-mini')
+  const [aiMode, setAiMode] = useState<'cloud' | 'ollama' | 'disabled'>(aiConfig?.mode || 'cloud')
   const [aiSaved, setAiSaved] = useState(false)
   const [aiSkills, setAiSkills] = useState(getAISkills())
   const [skillsSaved, setSkillsSaved] = useState(false)
@@ -24,7 +25,7 @@ export default function SettingsModal() {
   }
 
   const handleSaveAi = () => {
-    saveAIConfig({ endpoint: aiEndpoint, apiKey: aiKey, model: aiModel })
+    saveAIConfig({ endpoint: aiEndpoint, apiKey: aiKey, model: aiModel, mode: aiMode })
     setAiSaved(true)
     setTimeout(() => setAiSaved(false), 2000)
   }
@@ -226,6 +227,18 @@ export default function SettingsModal() {
                 <input value={aiModel} onChange={(e) => setAiModel(e.target.value)}
                   placeholder="gpt-4o-mini"
                   className="w-full bg-surface-alt border border-border rounded px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Privacy Mode</label>
+                <select value={aiMode} onChange={(e) => setAiMode(e.target.value as 'cloud' | 'ollama' | 'disabled')}
+                  className="w-full bg-surface-alt border border-border rounded px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent">
+                  <option value="cloud">Cloud (API key required)</option>
+                  <option value="ollama">Ollama (Local, privacy-first)</option>
+                  <option value="disabled">Disabled (no AI)</option>
+                </select>
+                {aiMode === 'ollama' && (
+                  <p className="text-[10px] text-text-secondary mt-1">Uses local Ollama server at http://localhost:11434</p>
+                )}
               </div>
               <div className="flex gap-2">
                 <button onClick={handleSaveAi}

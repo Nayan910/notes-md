@@ -127,6 +127,7 @@ class _EditorScreenState extends State<EditorScreen> {
           },
           onSaveFileContent: _handleSaveFileContent,
           onFileChanged: _handleFileChanged,
+          onPickFile: _handlePickFile,
         );
 
         // Inject the flutter bridge script
@@ -203,5 +204,15 @@ if (!window.flutter_postMessage) {
   void _handleFileChanged(String id, String title) {
     // Could update a recent files list or breadcrumb
     debugPrint('Active file changed: $title ($id)');
+  }
+
+  Future<void> _handlePickFile() async {
+    final file = await _fileService.pickMarkdownFile();
+    if (file != null && _bridgeService != null) {
+      await _bridgeService!.sendOpenFile(
+        file['content']!,
+        title: file['title'],
+      );
+    }
   }
 }

@@ -12,3 +12,10 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+
+# APK builds
+*.apk
+# Android build output
+apps/notes-md-app/build/
+# DB files
+*.db

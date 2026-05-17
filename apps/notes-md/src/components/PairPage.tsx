@@ -17,7 +17,7 @@ export default function PairPage() {
     setError('')
     setClaimed(false)
     try {
-      const res = await fetch('http://localhost:8000/pair/generate', {
+      const res = await fetch(`${window.location.protocol}//${window.location.hostname}:8000/pair/generate`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -42,7 +42,7 @@ export default function PairPage() {
     const interval = setInterval(async () => {
       try {
         const res = await fetch(
-          `http://localhost:8000/pair/status/${pairingToken}`
+          `${window.location.protocol}//${window.location.hostname}:8000/pair/status/${pairingToken}`
         )
         const data = await res.json()
         if (data.claimed) setClaimed(true)

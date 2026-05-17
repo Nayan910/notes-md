@@ -8,16 +8,19 @@ class BridgeService {
   final VoidCallback _onReady;
   final void Function(String id, String content, String title) _onSaveFileContent;
   final void Function(String id, String title) _onFileChanged;
+  final VoidCallback _onPickFile;
 
   BridgeService({
     required InAppWebViewController controller,
     required VoidCallback onReady,
     required void Function(String id, String content, String title) onSaveFileContent,
     required void Function(String id, String title) onFileChanged,
+    required VoidCallback onPickFile,
   })  : _controller = controller,
         _onReady = onReady,
         _onSaveFileContent = onSaveFileContent,
-        _onFileChanged = onFileChanged;
+        _onFileChanged = onFileChanged,
+        _onPickFile = onPickFile;
 
   /// Process a message from the web editor JavaScript
   void handleMessage(String message) {
@@ -46,6 +49,9 @@ class BridgeService {
               payload['title'] as String? ?? '',
             );
           }
+          break;
+        case 'pick-file':
+          _onPickFile();
           break;
       }
     } catch (_) {

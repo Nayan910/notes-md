@@ -16,7 +16,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>(null!)
 
-const API = 'http://localhost:8000'
+const API = `${window.location.protocol}//${window.location.hostname}:8000`
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)

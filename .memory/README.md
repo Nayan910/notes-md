@@ -26,7 +26,8 @@
 | Know what to work on next | `07-next-steps.md` |
 | Understand Nayan's quirks & preferences | `08-user-profile.md` |
 | See the full session history | `sessions/README.md` |
-| Read the last session in detail | `sessions/002-2026-05-16-session2.md` |
+| Read the last session in detail | `sessions/003-2026-05-16-session3.md` |
+| Read your initialization prompt (Bob clones) | `bob-initialization-prompt.md` |
 | See the design spec | `../docs/superpowers/specs/` |
 | See the implementation plan | `../docs/superpowers/plans/` |
 

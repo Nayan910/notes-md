@@ -13,7 +13,14 @@ export default function Toolbar() {
 
   const handleNew = () => createDoc()
 
-  const handleOpen = () => fileInputRef.current?.click()
+  const handleOpen = () => {
+    // If inside Flutter WebView, use bridge to native file picker
+    if (window.flutter_postMessage) {
+      window.flutter_postMessage(JSON.stringify({ type: 'pick-file', payload: {} }))
+    } else {
+      fileInputRef.current?.click()
+    }
+  }
 
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

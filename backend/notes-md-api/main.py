@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
 
 import pypandoc
@@ -311,3 +311,17 @@ async def convert_export(request: ExportRequest):
                 os.unlink(tmp_path)
             except (OSError, UnboundLocalError):
                 pass
+
+
+@app.get("/download/apk")
+async def download_apk():
+    """Download the latest notes.md Android APK."""
+    apk_path = Path(__file__).parent.parent.parent / "notes-md-debug.apk"
+    alt_path = Path(__file__).parent.parent.parent / "apps" / "notes-md-app" / "build" / "app" / "outputs" / "flutter-apk" / "app-debug.apk"
+
+    if apk_path.exists():
+        return FileResponse(str(apk_path), media_type="application/vnd.android.package-archive", filename="notes-md.apk")
+    elif alt_path.exists():
+        return FileResponse(str(alt_path), media_type="application/vnd.android.package-archive", filename="notes-md.apk")
+    else:
+        raise HTTPException(status_code=404, detail="APK not found. Build the Flutter app first.")

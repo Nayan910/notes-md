@@ -25,11 +25,14 @@ The Flutter app is the part that needs the most love right now. We already built
 - **Backend-powered Export** — Export dropdown in toolbar uses `POST /convert/export` for pandoc formats (docx, odt, html, txt, rst, latex, epub)
 
 ### What's Broken / In Progress
-1. **LAN Pairing** — The Flutter app can pair with the web editor over the LAN, but we haven't fully verified it works on a real device over 192.168.*. The host derivation fix is in, but there might be CORS or firewall issues.
-2. **QR Scanning** — Camera permission is in the AndroidManifest, but we need runtime permission handling and the scanning flow in `pair_screen.dart` (mobile_scanner) needs testing on actual devices.
-3. ~~**File Upload**~~ ✅ **FIXED** — JS bridge intercepts `<input type="file">` clicks in Toolbar.tsx, routes through Flutter's native file_picker, sends content back via bridge.
-4. **QR Scanning Reliability** — Need to add logging, fallback parsing, and runtime camera permission dialogs.
-5. **Git Push Broken** — Codeberg PAT expired. All 3 latest commits are local only.
+1. **LAN Pairing** — Not fully verified end-to-end on 192.168.* devices. CORS and firewall untested.
+2. **QR Scanning** — Camera permission in AndroidManifest, but runtime handling + fallback not done.
+3. ~~**File Upload**~~ ✅ **FIXED** — JS bridge working.
+4. ~~**Git Push**~~ ✅ **FIXED** — Verified working with Codeberg store credentials.
+5. ~~**Import/Export UI**~~ ✅ **DONE** — Backend-powered import (any file → markdown) + export (pandoc formats).
+6. **Alpha Release** — APK download endpoint added (`/download/apk`) but no Codeberg release created yet.
+7. **React Error Boundaries** — Not implemented.
+8. **Everything else** — See `.memory/00-todo-list.md` for the full prioritized backlog.
 
 ### The Stack
 - **Frontend**: Vite + React + TypeScript (`apps/notes-md/`)
@@ -58,17 +61,24 @@ Here's what I need from you, in priority order:
 7. **Git-backed sync** — Server-side git integration for note sync across devices.
 ~~8. **UX overhaul**~~ ✅ **DONE** — VS Code-like UI with 3 layout modes (VS Code/Classic/Notes), warm terracotta/cream palette, no blue or purple anywhere.
 
-## Key Files You'll Need
-- `E:\oprncode\project\apps\notes-md-app\lib\screens\home_screen.dart` — WebView URL config
-- `E:\oprncode\project\apps\notes-md-app\lib\screens\pair_screen.dart` — QR scanner
-- `E:\oprncode\project\apps\notes-md-app\android\app\src\main\AndroidManifest.xml` — Permissions
-- `E:\oprncode\project\apps\notes-md\src\context\AuthContext.tsx` — API host derivation
-- `E:\oprncode\project\apps\notes-md\src\components\PairPage.tsx` — Pairing UI
-- `E:\oprncode\project\apps\notes-md\src\components\Preview.tsx` — Markdown preview (rehypeRaw removed)
-- `E:\oprncode\project\backend\notes-md-api\main.py` — FastAPI backend + /convert/export
-- `E:\oprncode\project\apps\notes-md\src\utils\api.ts` — Backend API utility (uploadFile, exportDocument, apiGet, apiPost)
-- `E:\oprncode\project\apps\notes-md\src\components\ExportMenu.tsx` — Export dropdown (local md/html + pandoc formats via backend)
-- `E:\oprncode\project\.memory\07-next-steps.md` — Full roadmap
+## Quick References
+- **Full TODO list**: `E:\oprncode\project\.memory\00-todo-list.md` — consolidated from all sources
+- **Progress log**: `E:\oprncode\project\.memory\04-progress.md`
+- **Next steps (legacy)**: `E:\oprncode\project\.memory\07-next-steps.md`
+- **Architecture**: `E:\oprncode\project\.memory\02-architecture.md`
+
+## Key Files
+- `apps/notes-md-app/lib/screens/home_screen.dart` — WebView URL config
+- `apps/notes-md-app/lib/screens/pair_screen.dart` — QR scanner
+- `apps/notes-md-app/android/app/src/main/AndroidManifest.xml` — Permissions
+- `apps/notes-md/src/context/AuthContext.tsx` — API host derivation
+- `apps/notes-md/src/components/PairPage.tsx` — Pairing UI
+- `apps/notes-md/src/components/Preview.tsx` — Markdown preview
+- `apps/notes-md/src/components/SettingsModal.tsx` — Settings + APK download link
+- `apps/notes-md/src/components/ExportMenu.tsx` — Export dropdown (pandoc via backend)
+- `apps/notes-md/src/components/Toolbar.tsx` — Import/Export/Open buttons
+- `apps/notes-md/src/utils/api.ts` — Backend API utility
+- `backend/notes-md-api/main.py` — FastAPI backend (convert, auth, pair, /download/apk)
 
 ## The Bobiverse Rules
 

@@ -13,6 +13,10 @@ export default {
         border: {
           DEFAULT: 'var(--color-border)',
         },
+        accent: {
+          DEFAULT: 'var(--color-accent)',
+          hover: 'var(--color-accent-hover)',
+        },
         text: {
           primary: 'var(--color-text-primary)',
           secondary: 'var(--color-text-secondary)',

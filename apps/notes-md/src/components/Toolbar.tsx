@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { useStore } from '../store/useStore'
-import type { ViewMode } from '../types'
+import type { ViewMode, LayoutMode } from '../types'
 
 export default function Toolbar() {
   const createDoc = useStore((s) => s.createDoc)
@@ -9,6 +9,8 @@ export default function Toolbar() {
   const toggleSettings = useStore((s) => s.toggleSettings)
   const settings = useStore((s) => s.settings)
   const updateSettings = useStore((s) => s.updateSettings)
+  const layoutMode = useStore((s) => s.settings.layoutMode)
+  const setLayoutMode = useStore((s) => s.setLayoutMode)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleNew = () => createDoc()
@@ -95,12 +97,37 @@ export default function Toolbar() {
           <button
             key={mode}
             onClick={() => setViewMode(mode)}
-            className={`toolbar-btn ${viewMode === mode ? 'text-blue-500 bg-surface-hover' : ''}`}
+            className={`toolbar-btn ${viewMode === mode ? 'text-accent bg-surface-hover' : ''}`}
             title={label}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d={icon} />
             </svg>
+          </button>
+        ))}
+        <div className="w-px h-5 bg-border mx-1" />
+        {/* Layout switcher */}
+        {(['classic', 'vscode', 'notes'] as LayoutMode[]).map((mode) => (
+          <button
+            key={mode}
+            onClick={() => setLayoutMode(mode)}
+            className={`toolbar-btn capitalize text-[10px] font-medium ${layoutMode === mode ? 'text-accent bg-surface-hover' : ''}`}
+            title={`${mode} layout`}
+          >
+            {mode === 'classic' ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="9" y1="3" x2="9" y2="21" />
+              </svg>
+            ) : mode === 'vscode' ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 7h16M4 12h16M4 17h12" />
+              </svg>
+            )}
           </button>
         ))}
       </div>

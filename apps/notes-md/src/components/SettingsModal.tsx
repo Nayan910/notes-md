@@ -1,11 +1,12 @@
 import { useStore } from '../store/useStore'
-import type { Settings } from '../types'
+import type { Settings, LayoutMode } from '../types'
 
 export default function SettingsModal() {
   const isOpen = useStore((s) => s.isSettingsOpen)
   const settings = useStore((s) => s.settings)
   const updateSettings = useStore((s) => s.updateSettings)
   const toggleSettings = useStore((s) => s.toggleSettings)
+  const setLayoutMode = useStore((s) => s.setLayoutMode)
 
   if (!isOpen) return null
 
@@ -39,7 +40,7 @@ export default function SettingsModal() {
                   onClick={() => set('theme', t)}
                   className={`flex-1 py-2 px-3 rounded text-sm capitalize transition-colors ${
                     settings.theme === t
-                      ? 'bg-blue-500 text-white'
+                      ? 'bg-accent text-white'
                       : 'bg-surface-alt text-text-secondary hover:bg-surface-hover'
                   }`}
                 >
@@ -128,6 +129,26 @@ export default function SettingsModal() {
                   />
                 </div>
               )}
+            </div>
+          </section>
+
+          {/* Layout Mode */}
+          <section>
+            <h3 className="text-sm font-medium text-text-primary mb-3">Layout Mode</h3>
+            <div className="flex gap-2">
+              {(['classic', 'vscode', 'notes'] as LayoutMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setLayoutMode(mode)}
+                  className={`flex-1 py-2 px-3 rounded text-sm capitalize transition-colors ${
+                    settings.layoutMode === mode
+                      ? 'bg-accent text-white'
+                      : 'bg-surface-alt text-text-secondary hover:bg-surface-hover'
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
             </div>
           </section>
 

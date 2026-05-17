@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
-import type { Document, Settings, ViewMode, Tab } from '../types'
+import type { Document, Settings, ViewMode, Tab, LayoutMode } from '../types'
 import {
   loadDocs, saveDocs,
   loadSettings, saveSettings,
@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS: Settings = {
   autoSaveDelay: 2000,
   sideBySide: true,
   showSidebar: true,
+  layoutMode: 'classic',
 }
 
 interface AppState {
@@ -47,6 +48,7 @@ interface AppState {
   // Settings actions
   updateSettings: (partial: Partial<Settings>) => void
   setViewMode: (mode: ViewMode) => void
+  setLayoutMode: (mode: LayoutMode) => void
   toggleSettings: () => void
 }
 
@@ -209,6 +211,7 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     setViewMode: (mode: ViewMode) => set({ viewMode: mode }),
+    setLayoutMode: (mode: LayoutMode) => get().updateSettings({ layoutMode: mode }),
 
     toggleSettings: () => set((s) => ({ isSettingsOpen: !s.isSettingsOpen })),
   }

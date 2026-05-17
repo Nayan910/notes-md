@@ -16,9 +16,12 @@ export interface Settings {
   autoSaveDelay: number;
   sideBySide: boolean;
   showSidebar: boolean;
+  layoutMode: LayoutMode;
 }
 
 export type ViewMode = 'edit' | 'preview' | 'both';
+
+export type LayoutMode = 'vscode' | 'classic' | 'notes';
 
 export interface Tab {
   docId: string;

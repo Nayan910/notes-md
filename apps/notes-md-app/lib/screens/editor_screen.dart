@@ -84,7 +84,7 @@ class _EditorScreenState extends State<EditorScreen> {
     // For now, use a data URI with the built index.html content
     final initialUrl = _useDevServer
         ? WebUri('http://localhost:5173')
-        : WebUri('file:///android_asset/flutter_assets/assets/notes-md/index.html');
+        : WebUri('file:///android_asset/notes-md/index.html');
 
     return InAppWebView(
       initialSettings: InAppWebViewSettings(

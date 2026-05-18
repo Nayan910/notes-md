@@ -1,0 +1,6 @@
+{
+  "installPath": "E:\\apps\\visual studio--\\vs product",
+  "add": ["Microsoft.VisualStudio.Component.VC.ATL"],
+  "includeRecommended": true,
+  "passive": true
+}

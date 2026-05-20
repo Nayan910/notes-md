@@ -21,7 +21,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   // For production: load from bundled assets
   // For development: connect to Vite dev server
-  final bool _useDevServer = true; // Toggle for production vs dev
+  final bool _useDevServer = false; // false = load from local assets (standalone)
 
   @override
   void initState() {
@@ -84,7 +84,7 @@ class _EditorScreenState extends State<EditorScreen> {
     // For now, use a data URI with the built index.html content
     final initialUrl = _useDevServer
         ? WebUri('http://localhost:5173')
-        : WebUri('file:///android_asset/notes-md/index.html');
+        : WebUri('http://localhost:8080/assets/notes-md/index.html');
 
     return InAppWebView(
       initialSettings: InAppWebViewSettings(

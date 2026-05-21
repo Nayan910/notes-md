@@ -19,3 +19,6 @@ Thumbs.db
 apps/notes-md-app/build/
 # DB files
 *.db
+# Windows build artifact copies
+notes-md-windows/
+notes-md-windows.zip

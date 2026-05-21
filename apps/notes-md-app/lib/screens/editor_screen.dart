@@ -1,8 +1,13 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../services/bridge_service.dart';
 import '../services/file_service.dart';
+import '../services/app_logger.dart';
 import '../widgets/toolbar.dart';
+import '../widgets/log_viewer.dart';
+import '../main.dart' show IncomingFile;
 
 class EditorScreen extends StatefulWidget {
   const EditorScreen({super.key});
@@ -15,18 +20,46 @@ class _EditorScreenState extends State<EditorScreen> {
   InAppWebViewController? _webViewController;
   BridgeService? _bridgeService;
   final FileService _fileService = FileService();
+  final AppLogger _log = AppLogger();
   bool _isReady = false;
   bool _isLoading = true;
   int _loadProgress = 0;
+  bool _showLog = false;
 
-  // For production: load from bundled assets
-  // For development: connect to Vite dev server
-  final bool _useDevServer = false; // false = load from local assets (standalone)
+  String? _initialHtml;
 
   @override
   void initState() {
     super.initState();
-    InAppLocalhostServer().start();
+    _log.info('App starting — offline standalone mode');
+    _loadAssetHtml();
+    _checkIntentFile();
+  }
+
+  Future<void> _checkIntentFile() async {
+    // Handle file opened from another app (Android intent / Windows file association)
+    try {
+      if (Platform.isAndroid) {
+        // Will be handled via MethodChannel or platform-specific code
+        _log.info('Platform: Android');
+      } else if (Platform.isWindows) {
+        _log.info('Platform: Windows');
+      }
+    } catch (e) {
+      _log.warn('Platform check: $e');
+    }
+  }
+
+  Future<void> _loadAssetHtml() async {
+    try {
+      final html = await rootBundle.loadString('assets/notes-md/index.html');
+      setState(() => _initialHtml = html);
+      _log.info('Editor HTML loaded from assets (${html.length} chars)');
+    } catch (e) {
+      _log.error('Failed to load asset HTML', e);
+      // Fallback: will show loading error in WebView
+      setState(() => _initialHtml = '<html><body><p>Failed to load editor</p></body></html>');
+    }
   }
 
   @override
@@ -39,15 +72,33 @@ class _EditorScreenState extends State<EditorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+      endDrawer: Drawer(
+        child: SafeArea(
+          child: LogViewer(),
+        ),
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            // Native toolbar
+            // Native toolbar + log button
             if (_isReady)
-              NotesMdToolbar(
-                onNewDoc: _handleNewDoc,
-                onOpenFile: _handleOpenFile,
-                onSaveFile: _handleSaveFile,
+              Row(
+                children: [
+                  Expanded(
+                    child: NotesMdToolbar(
+                      onNewDoc: _handleNewDoc,
+                      onOpenFile: _handleOpenFile,
+                      onSaveFile: _handleSaveFile,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.bug_report_outlined, size: 18),
+                    tooltip: 'App Log',
+                    onPressed: () => Scaffold.of(context).openEndDrawer(),
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(minWidth: 36, minHeight: 36),
+                  ),
+                ],
               ),
             // WebView / loading indicator
             Expanded(
@@ -80,11 +131,19 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildWebView() {
-    // In production, we'd use a local asset URL
-    // For now, use a data URI with the built index.html content
-    final initialUrl = _useDevServer
-        ? WebUri('http://localhost:5173')
-        : WebUri('http://localhost:8080/assets/notes-md/index.html');
+    // Determine the base URL for resolving asset paths (JS, CSS) inside the HTML
+    String baseUrl;
+    try {
+      if (Platform.isAndroid) {
+        baseUrl = 'file:///android_asset/notes-md/';
+      } else if (Platform.isWindows) {
+        baseUrl = 'file:///data/flutter_assets/assets/notes-md/';
+      } else {
+        baseUrl = 'file:///android_asset/notes-md/';
+      }
+    } catch (_) {
+      baseUrl = 'file:///android_asset/notes-md/';
+    }
 
     return InAppWebView(
       initialSettings: InAppWebViewSettings(
@@ -96,7 +155,18 @@ class _EditorScreenState extends State<EditorScreen> {
         supportZoom: false,
         transparentBackground: true,
       ),
-      initialUrlRequest: URLRequest(url: initialUrl),
+      initialData: _initialHtml != null
+          ? InAppWebViewInitialData(
+              data: _initialHtml!,
+              baseUrl: WebUri(baseUrl),
+              mimeType: 'text/html',
+              encoding: 'utf-8',
+              historyUrl: WebUri(baseUrl),
+            )
+          : null,
+      initialUrlRequest: _initialHtml == null
+          ? URLRequest(url: WebUri('about:blank'))
+          : null,
       onWebViewCreated: (controller) {
         _webViewController = controller;
 
@@ -124,6 +194,7 @@ class _EditorScreenState extends State<EditorScreen> {
           controller: controller,
           onReady: () {
             setState(() => _isReady = true);
+            _handleIncomingFile();
           },
           onSaveFileContent: _handleSaveFileContent,
           onFileChanged: _handleFileChanged,
@@ -137,7 +208,18 @@ class _EditorScreenState extends State<EditorScreen> {
         setState(() => _loadProgress = progress);
       },
       onConsoleMessage: (controller, message) {
+        if (message.message.toLowerCase().contains('error') ||
+            message.message.toLowerCase().contains('exception') ||
+            message.message.toLowerCase().contains('fail')) {
+          _log.warn('[WebView] ${message.message}');
+        }
         debugPrint('[WebView] ${message.message}');
+      },
+      onLoadError: (controller, url, code, message) {
+        _log.error('WebView load error ($code): $message');
+      },
+      onLoadHttpError: (controller, url, code, message) {
+        _log.error('WebView HTTP error $code: $message');
       },
     );
   }
@@ -213,6 +295,17 @@ if (!window.flutter_postMessage) {
         file['content']!,
         title: file['title'],
       );
+    }
+  }
+
+  void _handleIncomingFile() {
+    if (IncomingFile.content != null && _bridgeService != null) {
+      final content = IncomingFile.content!;
+      final title = IncomingFile.title ?? 'document.md';
+      _log.info('Opening file from intent: $title');
+      _bridgeService!.sendOpenFile(content, title: title);
+      IncomingFile.content = null;
+      IncomingFile.title = null;
     }
   }
 }

@@ -1,19 +1,43 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
+import 'services/app_logger.dart';
 import 'screens/pair_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/editor_screen.dart';
 
+final AppLogger _log = AppLogger();
+
+/// Holds a file intent data received from another app (e.g. opening a .md file).
+class IncomingFile {
+  static String? content;
+  static String? title;
+}
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  _setupIntentChannel();
   runApp(
     ChangeNotifierProvider(
       create: (_) => AuthService()..load(),
       child: const NotesMdApp(),
     ),
   );
+}
+
+void _setupIntentChannel() {
+  if (!Platform.isAndroid) return;
+  const channel = MethodChannel('com.notesmd.notes_md_app/file');
+  channel.setMethodCallHandler((call) async {
+    if (call.method == 'openFile') {
+      IncomingFile.content = call.arguments['content'] as String?;
+      IncomingFile.title = call.arguments['title'] as String?;
+      _log.info('Received file intent: ${IncomingFile.title}');
+    }
+  });
 }
 
 class NotesMdApp extends StatelessWidget {

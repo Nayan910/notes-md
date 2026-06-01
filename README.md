@@ -34,6 +34,8 @@ The **Flutter app embeds the web editor** using `flutter_inappwebview`. A `Bridg
 
 ## Setup
 
+There are two ways to run notes.md — **local** (everything on one machine) or **self-hosted** (server on your network, access from any device).
+
 ### Prerequisites
 
 | Component | Requirement |
@@ -44,7 +46,13 @@ The **Flutter app embeds the web editor** using `flutter_inappwebview`. A `Bridg
 | **JDK** | 17 or 21 (for Android builds only) |
 | **VS Build Tools** | Windows desktop C++ workload (for Windows builds only) |
 
-### 1. Backend
+---
+
+### Option A: Local Setup (Single Machine)
+
+All services run on your computer. The web editor and Flutter app both connect to `localhost`.
+
+#### 1. Backend
 
 ```bash
 cd backend/notes-md-api
@@ -54,7 +62,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 The backend provides document conversion, authentication, device pairing, and file sync.
 
-### 2. Web Editor
+#### 2. Web Editor
 
 ```bash
 cd apps/notes-md
@@ -64,7 +72,7 @@ npm run dev
 
 Open http://localhost:5173 in your browser. The web editor works standalone without the Flutter app.
 
-### 3. Flutter App (Optional)
+#### 3. Flutter App (Optional)
 
 ```bash
 cd apps/notes-md-app
@@ -75,12 +83,94 @@ flutter run -d android   # Android (requires SDK + JDK)
 
 > The Flutter app loads the web editor. By default it connects to `localhost:5173` in debug mode. In release builds it loads from bundled assets.
 
+---
+
+### Option B: Self-Hosted Server (Local Network)
+
+Run the backend on a machine on your network (a spare PC, laptop, or server). Then access the editor from any device on the same network — desktop browser, Android phone, or another computer.
+
+#### 1. Find your server's IP
+
+On the server machine, find its local network IP:
+
+```bash
+# Windows
+ipconfig
+
+# Linux / macOS
+ip addr
+# or
+ifconfig
+```
+
+Typical local IPs look like `192.168.1.x`, `10.0.0.x`, or `172.16.x.x`.
+
+#### 2. Start the backend server
+
+```bash
+cd backend/notes-md-api
+pip install -r requirements.txt
+
+# Allow connections from any device on your network
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Set environment variables for your network:
+
+```bash
+# Linux / macOS
+export JWT_SECRET="your-strong-secret-here"
+export CORS_ORIGINS="http://192.168.1.x:5173,http://192.168.1.x:8000"
+
+# Windows PowerShell
+$env:JWT_SECRET = "your-strong-secret-here"
+$env:CORS_ORIGINS = "http://192.168.1.x:5173,http://192.168.1.x:8000"
+```
+
+Replace `192.168.1.x` with your server's actual IP.
+
+#### 3. Start the web editor
+
+The web editor's API base URL is **dynamic** — it uses the same hostname it's served from, on port 8000. No config file changes needed.
+
+```bash
+cd apps/notes-md
+npm install
+npm run dev
+```
+
+The web dev server starts on `localhost:5173`. Access it from other devices on your network at `http://192.168.1.x:5173`. The editor will automatically connect to the API at `http://192.168.1.x:8000`.
+
+#### 4. Configure the Flutter app for your network
+
+Open `apps/notes-md-app/lib/services/auth_service.dart` and `apps/notes-md-app/lib/screens/home_screen.dart`, then update the server URLs:
+
+```dart
+// auth_service.dart
+String _server = 'http://192.168.1.x:8000';
+
+// home_screen.dart  
+final String _webViewUrl = 'http://192.168.1.x:5173';
+```
+
+Build the Flutter app with these settings, install it on your devices, and they will connect to your self-hosted server.
+
+#### 5. Pair devices
+
+Open the web editor at `http://192.168.1.x:5173`, register an account, and navigate to `/pair`. Scan the QR code from the Flutter app on your phone — they will pair over your local network.
+
+> ⚠️ **Firewall note:** Make sure ports `8000` (backend) and `5173` (web editor) are open on your server's firewall. On Windows, you may need to add inbound rules for these ports.
+
+---
+
 ### Environment Variables (Backend)
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `JWT_SECRET` | `notesmd-dev-secret-change-in-production` | JWT signing key (change in production) |
-| `CORS_ORIGINS` | `*` | Comma-separated allowed origins |
+| `JWT_SECRET` | `notesmd-dev-secret-change-in-production` | JWT signing key — **change this in production** |
+| `CORS_ORIGINS` | `*` | Comma-separated allowed CORS origins (e.g., `http://192.168.1.5:5173,http://192.168.1.5:8000`) |
+
+---
 
 ## Usage
 

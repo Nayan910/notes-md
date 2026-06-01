@@ -122,6 +122,16 @@ The Flutter app expects the web build output at `apps/notes-md-app/assets/notes-
 
 ---
 
+## Inspiration
+
+notes.md draws inspiration from several projects and tools:
+
+- **[MarkdownViewer.org](https://markdownviewer.org/)** — clean, distraction-free Markdown preview and cross-platform philosophy
+- **[GitNote](https://github.com/zhaopengme/gitnote)** — lightweight Markdown note-taking with git integration
+- **WhatsApp Web** — QR code device pairing pattern for seamless multi-device workflow
+
+---
+
 ## ⚠️ Alpha Disclaimer
 
 **notes.md is in early alpha (v0.1.0-alpha).**

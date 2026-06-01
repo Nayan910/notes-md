@@ -4,10 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
 import 'services/app_logger.dart';
-import 'screens/pair_screen.dart';
-import 'screens/login_screen.dart';
+import 'services/server_config_service.dart';
 import 'screens/home_screen.dart';
-import 'screens/editor_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/pair_screen.dart';
 
 final AppLogger _log = AppLogger();
 
@@ -21,8 +21,11 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   _setupIntentChannel();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AuthService()..load(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthService()..load()),
+        ChangeNotifierProvider(create: (_) => ServerConfigService()..load()),
+      ],
       child: const NotesMdApp(),
     ),
   );
@@ -59,59 +62,13 @@ class NotesMdApp extends StatelessWidget {
         brightness: Brightness.dark,
       ),
       themeMode: ThemeMode.system,
-      initialRoute: '/loading',
+      // Offline-first: launch directly into the editor
+      initialRoute: '/',
       routes: {
-        '/loading': (context) => const _LoadingScreen(),
+        '/': (context) => const HomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/pair': (context) => const PairScreen(),
-        '/home': (context) => const HomeScreen(),
-        '/editor': (context) => const EditorScreen(),
       },
-    );
-  }
-}
-
-/// Initial loading screen that checks if the user is already authenticated.
-class _LoadingScreen extends StatefulWidget {
-  const _LoadingScreen();
-
-  @override
-  State<_LoadingScreen> createState() => _LoadingScreenState();
-}
-
-class _LoadingScreenState extends State<_LoadingScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _checkAuth();
-  }
-
-  Future<void> _checkAuth() async {
-    final auth = context.read<AuthService>();
-    // Wait for auth state to load
-    if (auth.isLoading) {
-      await Future.delayed(const Duration(milliseconds: 500));
-    }
-    if (!mounted) return;
-
-    Navigator.of(context).pushReplacementNamed(
-      auth.isAuthenticated ? '/editor' : '/login',
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('notes.md'),
-          ],
-        ),
-      ),
     );
   }
 }

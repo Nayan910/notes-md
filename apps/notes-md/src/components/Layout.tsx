@@ -13,6 +13,7 @@ import WelcomeScreen from './WelcomeScreen'
 import SettingsModal from './SettingsModal'
 import SpeechBar from './SpeechBar'
 import AIAssistant from './AIAssistant'
+import SearchPalette from './SearchPalette'
 
 function UserBadge({ user, logout }: { user: { username: string } | null; logout: () => void }) {
   const navigate = useNavigate()
@@ -94,6 +95,7 @@ function ClassicLayout() {
       <UserBadge user={user} logout={logout} />
       <SettingsModal />
       <AIAssistant />
+      <SearchPalette />
     </div>
   )
 }
@@ -174,6 +176,7 @@ function VSCodeLayout() {
       <UserBadge user={user} logout={logout} />
       <SettingsModal />
       <AIAssistant />
+      <SearchPalette />
     </div>
   )
 }
@@ -231,6 +234,7 @@ function NotesLayout() {
       <SpeechBar />
       <SettingsModal />
       <AIAssistant />
+      <SearchPalette />
     </div>
   )
 }

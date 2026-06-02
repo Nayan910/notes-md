@@ -179,10 +179,15 @@ class _HomeScreenState extends State<HomeScreen> {
         _webViewController = controller;
         controller.addJavaScriptHandler(
           handlerName: 'flutterBridge',
-          callback: (args) {
+          callback: (args) async {
             if (args.isNotEmpty && args[0] is String) {
-              _bridgeService?.handleMessage(args[0] as String);
+              final result = await _bridgeService?.handleMessage(args[0] as String);
+              // Return the result to the WebView as a promise resolution
+              if (result != null) {
+                return result.toJson();
+              }
             }
+            return null;
           },
         );
       },
@@ -196,13 +201,16 @@ class _HomeScreenState extends State<HomeScreen> {
         });
         _bridgeService = BridgeService(
           controller: controller,
+          fileService: _fileService,
           onReady: () {
             setState(() => _isReady = true);
             _handleIncomingFile();
           },
-          onSaveFileContent: _handleSaveFileContent,
           onFileChanged: _handleFileChanged,
-          onPickFile: _handlePickFile,
+          onFileDeleted: _handleFileDeleted,
+          onFileRenamed: _handleFileRenamed,
+          onFileSaved: _handleFileSaved,
+          onFileCreated: _handleFileCreated,
         );
         _injectBridge(controller);
       },
@@ -230,67 +238,85 @@ class _HomeScreenState extends State<HomeScreen> {
     await controller.evaluateJavascript(source: '''
 if (!window.flutter_postMessage) {
   window.flutter_postMessage = function(message) {
-    window.flutter_inappwebview.callHandler('flutterBridge', message);
+    return window.flutter_inappwebview.callHandler('flutterBridge', message);
   };
   console.log('Flutter bridge injected');
 }
 ''');
   }
 
-  void _handleNewDoc() {
-    _webViewController?.evaluateJavascript(source: '''
-(() => {
-  if (window.__ZUSTAND_STORE__) {
-    window.__ZUSTAND_STORE__.getState().createDoc();
-  }
-})();
-''');
+  void _handleNewDoc() async {
+    try {
+      final path = await _fileService.createNote('Untitled');
+      final content = await _fileService.readNote(path);
+      if (_bridgeService != null) {
+        // Extract title from path
+        final name = path.split(RegExp(r'[/\\]')).last.replaceAll(RegExp(r'\.md$'), '');
+        await _bridgeService!.sendOpenFile(path, content, title: name);
+      }
+    } catch (e) {
+      _log.error('Failed to create new doc', e);
+    }
   }
 
   Future<void> _handleOpenFile() async {
-    final file = await _fileService.pickMarkdownFile();
-    if (file != null && _bridgeService != null) {
-      await _bridgeService!.sendOpenFile(
-        file['content']!,
-        title: file['title'],
-      );
+    // Use Flutter's file picker to let user pick a file from anywhere
+    try {
+      final result = await _fileService.pickMarkdownFile();
+      if (result == null) return;
+      // Create a new note in our notes dir and import content
+      final path = await _fileService.createNote(result['title']!);
+      await _fileService.writeNote(path, result['content']!);
+      _log.info('Imported file: ${result['title']}');
+      if (_bridgeService != null) {
+        await _bridgeService!.sendOpenFile(path, result['content']!, title: result['title']);
+      }
+    } catch (e) {
+      _log.error('Failed to import file', e);
     }
   }
 
   Future<void> _handleSaveFile() async {
-    if (_bridgeService == null) return;
-    await _webViewController?.evaluateJavascript(source: '''
+    if (_bridgeService == null || _webViewController == null) return;
+    // Ask web editor for the current state
+    try {
+      final result = await _webViewController!.evaluateJavascript(source: '''
 (() => {
   const state = window.__ZUSTAND_STORE__?.getState();
-  if (state?.activeDocId) {
-    window.dispatchEvent(new MessageEvent('message', {
-      data: JSON.stringify({
-        type: 'save-file',
-        payload: { id: state.activeDocId }
-      }),
-      origin: window.location.origin
-    }));
-  }
+  if (!state?.activeDocId) return null;
+  const doc = state.docs.find(d => d.id === state.activeDocId);
+  return doc ? { id: doc.id, title: doc.title, content: doc.content, path: doc.path || null } : null;
 })();
 ''');
-  }
-
-  void _handleSaveFileContent(String id, String content, String title) {
-    _fileService.saveMarkdownFile(content, title);
-  }
-
-  void _handleFileChanged(String id, String title) {
-    debugPrint('Active file changed: $title ($id)');
-  }
-
-  Future<void> _handlePickFile() async {
-    final file = await _fileService.pickMarkdownFile();
-    if (file != null && _bridgeService != null) {
-      await _bridgeService!.sendOpenFile(
-        file['content']!,
-        title: file['title'],
-      );
+      if (result is Map && result['path'] != null) {
+        await _fileService.writeNote(result['path'] as String, result['content'] as String);
+        _log.debug('Saved: ${result['path']}');
+      } else {
+        _log.warn('No path for active doc; cannot save to disk');
+      }
+    } catch (e) {
+      _log.error('Save failed', e);
     }
+  }
+
+  void _handleFileChanged(String path) {
+    _log.info('File opened in editor: $path');
+  }
+
+  void _handleFileDeleted(String path) {
+    _log.info('File deleted: $path');
+  }
+
+  void _handleFileRenamed(String oldPath, String newPath) {
+    _log.info('File renamed: $oldPath → $newPath');
+  }
+
+  void _handleFileSaved(String path, String content) {
+    _log.debug('File saved: $path (${content.length} chars)');
+  }
+
+  void _handleFileCreated(String path) {
+    _log.info('File created: $path');
   }
 
   void _handleIncomingFile() {
@@ -298,7 +324,11 @@ if (!window.flutter_postMessage) {
       final content = IncomingFile.content!;
       final title = IncomingFile.title ?? 'document.md';
       _log.info('Opening file from intent: $title');
-      _bridgeService!.sendOpenFile(content, title: title);
+      // For intent files, create a new note and open it
+      _fileService.createNote(title).then((path) async {
+        await _fileService.writeNote(path, content);
+        await _bridgeService!.sendOpenFile(path, content, title: title);
+      });
       IncomingFile.content = null;
       IncomingFile.title = null;
     }

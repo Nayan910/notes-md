@@ -4,6 +4,16 @@ export interface Document {
   content: string;
   createdAt: number;
   updatedAt: number;
+  /**
+   * Absolute path of the backing file on disk (e.g.
+   * `~/Documents/notes-md/Welcome.md` on desktop, or
+   * `/data/.../notes-md/Welcome.md` on Android).
+   *
+   * Populated when the doc was created/loaded via the Flutter bridge.
+   * `undefined` for docs that were created in standalone browser mode
+   * (no real on-disk file — they live only in IndexedDB).
+   */
+  path?: string;
 }
 
 export interface Settings {

@@ -13,6 +13,7 @@ class AppLogger {
   List<LogEntry> get entries => List.unmodifiable(_entries);
 
   void info(String message) => _add(LogLevel.info, message);
+  void debug(String message) => _add(LogLevel.info, '[debug] $message');
   void warn(String message) => _add(LogLevel.warning, message);
   void error(String message, [dynamic error, StackTrace? stack]) {
     String full = message;
@@ -21,6 +22,13 @@ class AppLogger {
     _add(LogLevel.error, full);
     debugPrint('[notes.md ERROR] $full');
   }
+
+  // Static helpers with tag prefix
+  static void d(String tag, String message) => _instance.debug('$tag: $message');
+  static void i(String tag, String message) => _instance.info('$tag: $message');
+  static void w(String tag, String message) => _instance.warn('$tag: $message');
+  static void e(String tag, String message, [dynamic error, StackTrace? stack]) =>
+      _instance.error('$tag: $message', error, stack);
 
   void _add(LogLevel level, String message) {
     _entries.add(LogEntry(

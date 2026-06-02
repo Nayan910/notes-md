@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Build-runner scratch artifacts (we hand-author database.g.dart so
+# this shouldn't normally exist; if it does, it's transient).
+build_runner.dill
+build_runner.jit

@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import '../database/database.dart';
 import 'file_service.dart';
 import 'app_logger.dart';
+import 'note_service.dart';
 
 /// Result wrapper for bridge commands.
 class BridgeResult {
@@ -31,18 +34,22 @@ class BridgeResult {
 /// - delete-note      → deletes {path}, returns success
 /// - rename-note      → renames {oldPath} to {newName}, returns {newPath}
 /// - create-note      → creates new note with {name}, returns {path}
+/// - search-notes     → FTS5 search {query}, returns [{path, name, snippet, score}]
 /// - file-changed     → notifies Flutter that web editor changed a file
 /// - file-deleted     → notifies Flutter that web editor deleted a file
 /// - ready            → web editor is ready
 ///
 /// Flutter → Web events:
 /// - notes-list-updated   → file list changed (external edit, new file, etc.)
+/// - search-results       → streamed search results
 /// - file-loaded          → load {path, content} in editor
 /// - theme-set            → change theme
 /// - font-size-set        → change font size
+/// - file-changed-externally → file changed outside the editor
 class BridgeService {
   final InAppWebViewController _controller;
   final FileService _fileService;
+  final NoteService? _noteService;
 
   // Callbacks for web → flutter notifications
   final VoidCallback onReady;
@@ -55,6 +62,7 @@ class BridgeService {
   BridgeService({
     required InAppWebViewController controller,
     required FileService fileService,
+    NoteService? noteService,
     required this.onReady,
     required this.onFileChanged,
     required this.onFileDeleted,
@@ -62,7 +70,8 @@ class BridgeService {
     required this.onFileSaved,
     required this.onFileCreated,
   })  : _controller = controller,
-        _fileService = fileService;
+        _fileService = fileService,
+        _noteService = noteService;
 
   /* ------------------------------------------------------------------ *
    * Incoming messages from web editor
@@ -107,6 +116,11 @@ class BridgeService {
           if (path == null) return BridgeResult.error('Missing path');
           if (content == null) return BridgeResult.error('Missing content');
           await _fileService.writeNote(path, content);
+          // Re-index in the background so search reflects the new content.
+          if (_noteService != null) {
+            // ignore: discarded_futures
+            _noteService.onFileChanged(path);
+          }
           onFileSaved(path, content);
           return BridgeResult.success({'path': path});
 
@@ -115,6 +129,9 @@ class BridgeService {
           final path = payload['path'] as String?;
           if (path == null) return BridgeResult.error('Missing path');
           await _fileService.deleteNote(path);
+          if (_noteService != null) {
+            await _noteService.onFileDeleted(path);
+          }
           onFileDeleted(path);
           return BridgeResult.success({'path': path});
 
@@ -125,6 +142,9 @@ class BridgeService {
           if (oldPath == null) return BridgeResult.error('Missing oldPath');
           if (newName == null) return BridgeResult.error('Missing newName');
           final newPath = await _fileService.renameNote(oldPath, newName);
+          if (_noteService != null) {
+            await _noteService.onFileRenamed(oldPath, newPath);
+          }
           onFileRenamed(oldPath, newPath);
           return BridgeResult.success({'newPath': newPath});
 
@@ -132,8 +152,23 @@ class BridgeService {
           if (payload == null) return BridgeResult.error('Missing payload');
           final name = payload['name'] as String? ?? 'Untitled';
           final path = await _fileService.createNote(name);
+          if (_noteService != null) {
+            await _noteService.onFileCreated(path);
+          }
           onFileCreated(path);
           return BridgeResult.success({'path': path});
+
+        case 'search-notes':
+          if (payload == null) return BridgeResult.error('Missing payload');
+          final query = (payload['query'] as String?) ?? '';
+          final limit = (payload['limit'] as int?) ?? 20;
+          if (_noteService == null) {
+            return BridgeResult.error('Search not available: index not ready');
+          }
+          final hits = await _noteService.search(query, limit: limit);
+          return BridgeResult.success(
+            hits.map((h) => h.toJson()).toList(),
+          );
 
         case 'file-changed':
           if (payload == null) return BridgeResult.error('Missing payload');
@@ -215,5 +250,15 @@ window.dispatchEvent(new MessageEvent('message', {
   /// Change the editor font size.
   Future<void> sendSetFontSize(int size) async {
     await _send('set-font-size', {'size': size});
+  }
+
+  /// Push a fresh search result set to the web editor. The web side
+  /// subscribes to `search-results` events to update the palette UI
+  /// without each keystroke having to wait for a full round-trip.
+  Future<void> sendSearchResults(String query, List<SearchHit> hits) async {
+    await _send('search-results', {
+      'query': query,
+      'results': hits.map((h) => h.toJson()).toList(),
+    });
   }
 }

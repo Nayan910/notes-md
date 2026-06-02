@@ -36,6 +36,16 @@ export interface NoteFile {
   modified: number;
 }
 
+/** A single hit returned by the Flutter FTS5 search index. */
+export interface SearchResult {
+  path: string;
+  name: string;
+  /** Highlighted preview with `<<…>>` around the matching term. */
+  snippet: string;
+  /** BM25 relevance score (lower = more relevant). */
+  score: number;
+}
+
 export interface ReadResult {
   path: string;
   content: string;
@@ -108,6 +118,13 @@ async function callBridge<T>(type: string, payload?: Record<string, unknown>): P
   }
   return result.data as T;
 }
+
+/**
+ * Public alias for `callBridge`. Exported so feature components (like
+ * the search palette) can call into the Flutter side without needing
+ * to know about the lower-level `bridge-storage` plumbing.
+ */
+export { callBridge };
 
 /* ------------------------------------------------------------------ *
  * IDB fallbacks (standalone browser mode)
@@ -233,6 +250,21 @@ export async function createFile(name: string): Promise<CreateResult> {
   return callBridge<CreateResult>('create-note', { name });
 }
 
+/**
+ * FTS5-powered full-text search. Returns `[]` when the bridge is
+ * absent (the search palette falls back to in-memory filtering in
+ * that case). Empty / blank queries return an empty list.
+ */
+export async function searchNotes(
+  query: string,
+  limit = 20,
+): Promise<SearchResult[]> {
+  if (!isBridgeAvailable()) return [];
+  const q = query.trim();
+  if (!q) return [];
+  return callBridge<SearchResult[]>('search-notes', { query: q, limit });
+}
+
 /* ------------------------------------------------------------------ *
  * Incoming event subscription
  *
@@ -250,6 +282,7 @@ export type BridgeEventType =
   | 'file-closed'
   | 'set-theme'
   | 'set-font-size'
+  | 'search-results'
   | string; // forward-compatible
 
 export interface BridgeEvent<T = unknown> {

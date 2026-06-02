@@ -6,11 +6,12 @@ import 'package:provider/provider.dart';
 import '../services/bridge_service.dart';
 import '../services/file_service.dart';
 import '../services/app_logger.dart';
+import '../services/note_service.dart';
 import '../services/server_config_service.dart';
 import '../widgets/toolbar.dart';
 import '../widgets/log_viewer.dart';
 import '../widgets/settings_dialog.dart';
-import '../main.dart' show IncomingFile;
+import '../main.dart' show AppServices, IncomingFile;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +23,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   InAppWebViewController? _webViewController;
   BridgeService? _bridgeService;
-  final FileService _fileService = FileService();
+  late final FileService _fileService;
+  NoteService? _noteService;
   final AppLogger _log = AppLogger();
   bool _isReady = false;
   bool _isLoading = true;
@@ -34,6 +36,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _log.info('App starting — offline standalone mode');
+    // _fileService is initialised in didChangeDependencies once the
+    // AppServices FutureProvider has resolved. Until then, fall back to
+    // a fresh instance so nothing in the UI breaks.
+    _fileService = FileService();
     _loadAssetHtml();
   }
 
@@ -47,6 +53,15 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() =>
           _initialHtml = '<html><body><p>Failed to load editor</p></body></html>');
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Pick up the shared singletons provided at the root of the tree.
+    final services = context.read<AppServices>();
+    _fileService = services.fileService;
+    _noteService = services.noteService;
   }
 
   @override
@@ -202,6 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _bridgeService = BridgeService(
           controller: controller,
           fileService: _fileService,
+          noteService: _noteService,
           onReady: () {
             setState(() => _isReady = true);
             _handleIncomingFile();

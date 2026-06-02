@@ -12,6 +12,8 @@ Each session record captures what a Bob (or the user) did, key decisions made, f
 | 4 | 2026-05-17 | OpenCode | Git push, pandoc export, white screen fix, full future roadmap in .memory | ~1h | 10+ files |
 | 5 | 2026-05-17 | OpenCode | Feature complete — AI memory, update checker, git sync, privacy modes, VS Code polish | ~3h | 15+ files |
 | 6 | 2026-05-18 | OpenCode | APK rebuild, Flutter login/standalone, VS Build Tools download | ~2h | 5 files + APK |
+| 7 | 2026-05-21 | OpenCode | WebView error logging, .md file association (Android), log viewer | ~2h | 7+ files |
+| 8 | 2026-06-01 | OpenCode | Offline-first refactor, configurable server URL, GitHub remote, skill creation | ~3h | 6+ files + skills |
 
 ## Quick Context
 

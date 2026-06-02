@@ -6,7 +6,16 @@ import App from './App'
 import LoginPage from './components/LoginPage'
 import PairPage from './components/PairPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import { bootstrapStore } from './store/bootstrap'
 import './index.css'
+
+// Kick off async IDB rehydration as early as possible.
+// The store is initialized synchronously with whatever localStorage has
+// (which will be empty after the first migration). This promise resolves
+// once IDB data is loaded and the store is updated.
+bootstrapStore().catch((e) => {
+  console.error('[main] Store bootstrap failed:', e);
+})
 
 function Root() {
   const { user } = useAuth()

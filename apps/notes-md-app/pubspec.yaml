@@ -46,6 +46,7 @@ dependencies:
   sqlite3_flutter_libs: ^0.6.0+eol
   watcher: ^1.2.0
   rxdart: ^0.28.0
+  bonsoir: ^5.1.0
 
 dev_dependencies:
   flutter_test:

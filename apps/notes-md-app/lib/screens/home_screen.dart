@@ -8,6 +8,7 @@ import '../services/file_service.dart';
 import '../services/app_logger.dart';
 import '../services/note_service.dart';
 import '../services/server_config_service.dart';
+import '../services/sync_service.dart';
 import '../widgets/toolbar.dart';
 import '../widgets/log_viewer.dart';
 import '../widgets/settings_dialog.dart';
@@ -25,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   BridgeService? _bridgeService;
   late final FileService _fileService;
   NoteService? _noteService;
+  SyncService? _syncService;
   final AppLogger _log = AppLogger();
   bool _isReady = false;
   bool _isLoading = true;
@@ -62,10 +64,29 @@ class _HomeScreenState extends State<HomeScreen> {
     final services = context.read<AppServices>();
     _fileService = services.fileService;
     _noteService = services.noteService;
+
+    // Init SyncService once (needs ServerConfigService from Provider tree)
+    if (_syncService == null) {
+      final serverConfig = context.read<ServerConfigService>();
+      _syncService = SyncService(
+        fileService: _fileService,
+        serverConfig: serverConfig,
+      );
+      _syncService!.addListener(_onSyncStatusChanged);
+      _syncService!.init(); // fire-and-forget, just reads secure storage
+
+      // React to server config changes (start/stop sync)
+      serverConfig.addListener(() {
+        _updateSyncState(serverConfig);
+      });
+
+      _log.i('HomeScreen', 'SyncService initialised');
+    }
   }
 
   @override
   void dispose() {
+    _syncService?.dispose();
     _webViewController?.dispose();
     super.dispose();
   }
@@ -111,11 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (serverConfig.hasServer && serverConfig.syncEnabled)
                       Padding(
                         padding: const EdgeInsets.only(right: 2),
-                        child: Tooltip(
-                          message: 'Connected to ${serverConfig.serverUrl}',
-                          child: Icon(Icons.cloud_done,
-                              size: 16, color: Colors.green.shade600),
-                        ),
+                        child: _buildSyncIcon(),
                       ),
                     IconButton(
                       icon: const Icon(Icons.settings_outlined, size: 18),
@@ -221,6 +238,9 @@ class _HomeScreenState extends State<HomeScreen> {
           onReady: () {
             setState(() => _isReady = true);
             _handleIncomingFile();
+            // Start background sync if server is configured
+            final config = context.read<ServerConfigService>();
+            _updateSyncState(config);
           },
           onFileChanged: _handleFileChanged,
           onFileDeleted: _handleFileDeleted,
@@ -321,18 +341,85 @@ if (!window.flutter_postMessage) {
 
   void _handleFileDeleted(String path) {
     _log.info('File deleted: $path');
+    if (_syncService?.isAvailable == true) {
+      _syncService?.syncNow();
+    }
   }
 
   void _handleFileRenamed(String oldPath, String newPath) {
     _log.info('File renamed: $oldPath → $newPath');
+    if (_syncService?.isAvailable == true) {
+      _syncService?.syncNow();
+    }
   }
 
   void _handleFileSaved(String path, String content) {
     _log.debug('File saved: $path (${content.length} chars)');
+    if (_syncService?.isAvailable == true) {
+      _syncService?.syncNow();
+    }
   }
 
   void _handleFileCreated(String path) {
     _log.info('File created: $path');
+    if (_syncService?.isAvailable == true) {
+      _syncService?.syncNow();
+    }
+  }
+
+  /// Called when SyncService status changes (e.g. syncing → success/error).
+  void _onSyncStatusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Start/stop SyncService based on server config state.
+  void _updateSyncState(ServerConfigService config) {
+    if (config.hasServer && config.syncEnabled) {
+      _syncService?.start();
+    } else {
+      _syncService?.stop();
+    }
+  }
+
+  /// Build the sync status icon based on current SyncService state.
+  Widget _buildSyncIcon() {
+    final status = _syncService?.status ?? SyncStatus.offline;
+    final serverUrl = context.read<ServerConfigService>().serverUrl ?? '';
+
+    switch (status) {
+      case SyncStatus.syncing:
+        return Tooltip(
+          message: 'Syncing… ($serverUrl)',
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.blue.shade400,
+            ),
+          ),
+        );
+      case SyncStatus.success:
+        return Tooltip(
+          message: 'Synced ($serverUrl)',
+          child: Icon(Icons.cloud_done, size: 16, color: Colors.green.shade600),
+        );
+      case SyncStatus.error:
+        return Tooltip(
+          message: 'Sync error: ${_syncService?.errorMessage ?? "unknown"}',
+          child: Icon(Icons.cloud_off, size: 16, color: Colors.red.shade400),
+        );
+      case SyncStatus.offline:
+        return Tooltip(
+          message: 'Sync offline',
+          child: Icon(Icons.cloud_outlined, size: 16, color: Colors.grey.shade400),
+        );
+      case SyncStatus.idle:
+        return Tooltip(
+          message: 'Sync idle ($serverUrl)',
+          child: Icon(Icons.cloud_queue, size: 16, color: Colors.grey.shade600),
+        );
+    }
   }
 
   void _handleIncomingFile() {

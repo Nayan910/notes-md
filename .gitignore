@@ -22,3 +22,9 @@ apps/notes-md-app/build/
 # Windows build artifact copies
 notes-md-windows/
 notes-md-windows.zip
+
+# Backend sync data (user files)
+backend/notes-md-api/sync_data/
+
+# Flutter generated files
+apps/notes-md-app/.dart_tool/

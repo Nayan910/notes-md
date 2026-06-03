@@ -8,3 +8,4 @@ pyjwt>=2.8.0
 python-dotenv>=1.0.0
 aiosqlite>=0.20.0
 pypandoc-binary>=1.13
+zeroconf>=0.132.0

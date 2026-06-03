@@ -29,7 +29,6 @@ class AppServices {
   final FileService fileService;
   final NoteService noteService;
   final FileWatcherService fileWatcher;
-
   AppServices({
     required this.database,
     required this.fileService,

@@ -28,6 +28,7 @@ from main import app
 import database
 import auth  # noqa: F811  (re-exported for patching)
 import pairing  # noqa: F811
+import sync  # noqa: F811
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -94,6 +95,7 @@ def db_session():
         patch("database.get_db", get_test_db),
         patch("auth.get_db", get_test_db),
         patch("pairing.get_db", get_test_db),
+        patch("sync.get_db", get_test_db),
     ]
     for p in patchers:
         p.start()
@@ -117,6 +119,7 @@ async def reset_db(db_session):
     db = await get_db()
     try:
         await db.executescript("""
+            DROP TABLE IF EXISTS sync_files;
             DROP TABLE IF EXISTS documents;
             DROP TABLE IF EXISTS devices;
             DROP TABLE IF EXISTS users;
@@ -149,6 +152,16 @@ async def reset_db(db_session):
                 content TEXT DEFAULT '',
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS sync_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                path TEXT NOT NULL,
+                mtime TEXT NOT NULL,
+                sha256 TEXT NOT NULL,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                UNIQUE(user_id, path)
             );
         """)
         await db.commit()
@@ -870,7 +883,364 @@ class TestPairClaimAndStatus:
         assert resp.json()["claimed"] is False
 
 
-# ── 11. /download/apk ────────────────────────────────────────────────
+# ── 11. /sync/* — File-level LWW sync ────────────────────────────────
+
+class TestSync:
+    """Tests for the file-level LWW sync endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_upload_requires_auth(self, client: AsyncClient):
+        resp = await client.post(
+            "/sync/upload",
+            files={"file": ("test.md", b"hello", "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+        )
+        assert resp.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_upload_success(self, client: AsyncClient, test_user):
+        resp = await client.post(
+            "/sync/upload",
+            files={"file": ("test.md", b"# Hello World", "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+            headers=test_user["headers"],
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["path"] == "test.md"
+        assert data["mtime"] == "2026-06-01T12:00:00Z"
+        assert isinstance(data["hash"], str)
+        assert len(data["hash"]) == 64  # SHA256 hex
+
+    @pytest.mark.asyncio
+    async def test_upload_overwrite_newer(self, client: AsyncClient, test_user):
+        """Uploading a newer version should succeed (LWW)."""
+        headers = test_user["headers"]
+
+        # First upload
+        r1 = await client.post(
+            "/sync/upload",
+            files={"file": ("doc.md", b"v1", "text/markdown")},
+            data={"mtime": "2026-06-01T10:00:00Z"},
+            headers=headers,
+        )
+        assert r1.status_code == 200
+
+        # Second upload with newer mtime
+        r2 = await client.post(
+            "/sync/upload",
+            files={"file": ("doc.md", b"v2", "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+            headers=headers,
+        )
+        assert r2.status_code == 200
+        assert r2.json()["hash"] != r1.json()["hash"]
+
+    @pytest.mark.asyncio
+    async def test_upload_conflict_older(self, client: AsyncClient, test_user):
+        """Uploading an older version returns 409 Conflict."""
+        headers = test_user["headers"]
+
+        # First upload with later mtime
+        r1 = await client.post(
+            "/sync/upload",
+            files={"file": ("conflict.md", b"newer", "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+            headers=headers,
+        )
+        assert r1.status_code == 200
+
+        # Second upload with older mtime
+        r2 = await client.post(
+            "/sync/upload",
+            files={"file": ("conflict.md", b"older", "text/markdown")},
+            data={"mtime": "2026-06-01T10:00:00Z"},
+            headers=headers,
+        )
+        assert r2.status_code == 409
+        assert "Conflict" in r2.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_upload_same_mtime_returns_409(self, client: AsyncClient, test_user):
+        """Upload with same mtime also returns 409 (LWW: existing wins tie)."""
+        headers = test_user["headers"]
+
+        r1 = await client.post(
+            "/sync/upload",
+            files={"file": ("tie.md", b"original", "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+            headers=headers,
+        )
+        assert r1.status_code == 200
+
+        r2 = await client.post(
+            "/sync/upload",
+            files={"file": ("tie.md", b"different", "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+            headers=headers,
+        )
+        assert r2.status_code == 409
+        assert "Conflict" in r2.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_upload_invalid_mtime_returns_400(self, client: AsyncClient, test_user):
+        resp = await client.post(
+            "/sync/upload",
+            files={"file": ("bad.md", b"data", "text/markdown")},
+            data={"mtime": "not-a-date"},
+            headers=test_user["headers"],
+        )
+        assert resp.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_list_requires_auth(self, client: AsyncClient):
+        resp = await client.get("/sync/list")
+        assert resp.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_list_empty(self, client: AsyncClient, test_user):
+        resp = await client.get("/sync/list", headers=test_user["headers"])
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["files"] == []
+        assert "server_time" in data
+
+    @pytest.mark.asyncio
+    async def test_list_with_files(self, client: AsyncClient, test_user):
+        headers = test_user["headers"]
+        # Upload a couple files
+        await client.post(
+            "/sync/upload",
+            files={"file": ("a.md", b"aaa", "text/markdown")},
+            data={"mtime": "2026-06-01T10:00:00Z"},
+            headers=headers,
+        )
+        await client.post(
+            "/sync/upload",
+            files={"file": ("b.md", b"bbb", "text/markdown")},
+            data={"mtime": "2026-06-01T11:00:00Z"},
+            headers=headers,
+        )
+
+        resp = await client.get("/sync/list", headers=headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["files"]) == 2
+        paths = [f["path"] for f in data["files"]]
+        assert "a.md" in paths
+        assert "b.md" in paths
+
+    @pytest.mark.asyncio
+    async def test_user_isolation_in_list(self, client: AsyncClient):
+        """Files from different users should not appear in each other's lists."""
+        r1 = await client.post("/auth/register", json={
+            "username": "user1_list", "password": "pass1",
+        })
+        r2 = await client.post("/auth/register", json={
+            "username": "user2_list", "password": "pass2",
+        })
+        h1 = {"Authorization": f"Bearer {r1.json()['token']}"}
+        h2 = {"Authorization": f"Bearer {r2.json()['token']}"}
+
+        await client.post(
+            "/sync/upload",
+            files={"file": ("user1.md", b"data", "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+            headers=h1,
+        )
+
+        l2 = await client.get("/sync/list", headers=h2)
+        assert len(l2.json()["files"]) == 0
+
+    @pytest.mark.asyncio
+    async def test_download_requires_auth(self, client: AsyncClient):
+        resp = await client.get("/sync/file/test.md")
+        assert resp.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_download_not_found(self, client: AsyncClient, test_user):
+        resp = await client.get(
+            "/sync/file/nonexistent.md",
+            headers=test_user["headers"],
+        )
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_download_success(self, client: AsyncClient, test_user):
+        headers = test_user["headers"]
+        content = b"# Download Test"
+        await client.post(
+            "/sync/upload",
+            files={"file": ("download.md", content, "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+            headers=headers,
+        )
+
+        resp = await client.get(
+            "/sync/file/download.md",
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.headers.get("x-file-mtime") == "2026-06-01T12:00:00Z"
+        assert "x-file-hash" in resp.headers
+        assert len(resp.headers["x-file-hash"]) == 64
+        assert resp.content == content
+
+    @pytest.mark.asyncio
+    async def test_download_with_subdirectory_path(self, client: AsyncClient, test_user):
+        headers = test_user["headers"]
+        content = b"# Subdir file"
+        await client.post(
+            "/sync/upload",
+            files={"file": ("docs/notes.md", content, "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+            headers=headers,
+        )
+
+        resp = await client.get(
+            "/sync/file/docs/notes.md",
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.content == content
+
+    @pytest.mark.asyncio
+    async def test_diff_requires_auth(self, client: AsyncClient):
+        resp = await client.post(
+            "/sync/diff",
+            json={"files": []},
+        )
+        assert resp.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_diff_empty(self, client: AsyncClient, test_user):
+        resp = await client.post(
+            "/sync/diff",
+            json={"files": []},
+            headers=test_user["headers"],
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["remote_updates"] == []
+        assert data["local_uploads"] == []
+        assert data["conflicts"] == []
+
+    @pytest.mark.asyncio
+    async def test_diff_remote_newer(self, client: AsyncClient, test_user):
+        headers = test_user["headers"]
+        # Upload a file to server
+        await client.post(
+            "/sync/upload",
+            files={"file": ("remote.md", b"server version", "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+            headers=headers,
+        )
+
+        # Client has older mtime
+        resp = await client.post(
+            "/sync/diff",
+            json={
+                "files": [
+                    {"path": "remote.md", "mtime": "2026-06-01T10:00:00Z", "hash": "oldhash"},
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["remote_updates"]) == 1
+        assert data["remote_updates"][0]["path"] == "remote.md"
+        assert data["local_uploads"] == []
+
+    @pytest.mark.asyncio
+    async def test_diff_local_newer(self, client: AsyncClient, test_user):
+        headers = test_user["headers"]
+        # Upload to server with early mtime
+        await client.post(
+            "/sync/upload",
+            files={"file": ("local.md", b"server version", "text/markdown")},
+            data={"mtime": "2026-06-01T10:00:00Z"},
+            headers=headers,
+        )
+
+        # Client has a newer version
+        resp = await client.post(
+            "/sync/diff",
+            json={
+                "files": [
+                    {"path": "local.md", "mtime": "2026-06-01T12:00:00Z", "hash": "newerhash"},
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["local_uploads"]) == 1
+        assert data["local_uploads"][0]["path"] == "local.md"
+        assert data["remote_updates"] == []
+
+    @pytest.mark.asyncio
+    async def test_diff_in_sync(self, client: AsyncClient, test_user):
+        headers = test_user["headers"]
+        await client.post(
+            "/sync/upload",
+            files={"file": ("synced.md", b"data", "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+            headers=headers,
+        )
+
+        # Get the actual hash from list
+        list_resp = await client.get("/sync/list", headers=headers)
+        actual_hash = list_resp.json()["files"][0]["hash"]
+
+        # Now diff with matching hash and mtime — should be in sync
+        resp = await client.post(
+            "/sync/diff",
+            json={
+                "files": [
+                    {"path": "synced.md", "mtime": "2026-06-01T12:00:00Z", "hash": actual_hash},
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["remote_updates"] == []
+        assert data["local_uploads"] == []
+        assert data["conflicts"] == []
+
+    @pytest.mark.asyncio
+    async def test_diff_local_only_file(self, client: AsyncClient, test_user):
+        """Client has a file the server doesn't know about."""
+        resp = await client.post(
+            "/sync/diff",
+            json={
+                "files": [
+                    {"path": "local-only.md", "mtime": "2026-06-01T12:00:00Z", "hash": "abc123"},
+                ]
+            },
+            headers=test_user["headers"],
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["local_uploads"]) == 1
+        assert data["local_uploads"][0]["path"] == "local-only.md"
+        assert data["remote_updates"] == []
+
+    @pytest.mark.asyncio
+    async def test_path_traversal_rejected(self, client: AsyncClient, test_user):
+        """Attempting path traversal should be rejected with 400."""
+        resp = await client.post(
+            "/sync/upload",
+            files={"file": ("../../etc/passwd", b"data", "text/markdown")},
+            data={"mtime": "2026-06-01T12:00:00Z"},
+            headers=test_user["headers"],
+        )
+        assert resp.status_code == 400
+        assert "path traversal" in resp.json()["detail"].lower()
+
+
+# ── 12. /download/apk ────────────────────────────────────────────────
 
 class TestDownloadApk:
     @pytest.mark.asyncio

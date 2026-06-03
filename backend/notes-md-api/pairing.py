@@ -5,7 +5,7 @@ WhatsApp Web-style QR code pairing between web and Android.
 
 import json
 import secrets
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 
 from database import get_db
 from models import (
@@ -17,27 +17,33 @@ from auth import get_current_user, create_token
 
 router = APIRouter(prefix="/pair", tags=["pairing"])
 
-# Default server URL — user should configure this to their local IP
-DEFAULT_SERVER = "http://192.168.1.8:8000"
-
 
 @router.post("/generate", response_model=PairGenerateResponse)
-async def generate_pairing(user: dict = Depends(get_current_user)):
+async def generate_pairing(
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
     """Generate a pairing token and QR data for device pairing.
 
     The QR data is a JSON string the Android app parses to extract
-    the pairing token and server URL.
+    the pairing token and server URL. The server URL is derived
+    dynamically from the incoming request's base URL.
     """
     db = await get_db()
     try:
         pairing_token = secrets.token_urlsafe(32)
+
+        # Derive server URL dynamically from the request
+        server_url = str(request.base_url).rstrip("/")
 
         # QR data encodes connection info the Android app needs
         qr_data = json.dumps({
             "type": "notesmd_pair",
             "version": 1,
             "token": pairing_token,
-            "server": DEFAULT_SERVER,
+            "server": server_url,
+            "device_name": "notes.md",
+            "trust_on_first_pair": True,
         })
 
         await db.execute(

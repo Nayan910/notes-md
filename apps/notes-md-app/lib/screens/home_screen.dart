@@ -80,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _updateSyncState(serverConfig);
       });
 
-      _log.i('HomeScreen', 'SyncService initialised');
+      AppLogger.i('HomeScreen', 'SyncService initialised');
     }
   }
 
@@ -261,9 +261,11 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         debugPrint('[WebView] ${message.message}');
       },
+      // ignore: deprecated_member_use
       onLoadError: (controller, url, code, message) {
         _log.error('WebView load error ($code): $message');
       },
+      // ignore: deprecated_member_use
       onLoadHttpError: (controller, url, code, message) {
         _log.error('WebView HTTP error $code: $message');
       },

@@ -32,19 +32,20 @@ class DiscoveryService {
       _isScanning = true;
 
       _discovery!.eventStream!.listen((event) {
-        if (event.type == BonsoirDiscoveryEventType.discoveryServiceFound) {
-          final service = event.service!;
-          // Extract IP and port from the discovered service
+        // Only handle resolved services (have IP address)
+        if (event.type == BonsoirDiscoveryEventType.discoveryServiceResolved &&
+            event.isServiceResolved &&
+            event.service != null) {
+          final service = event.service! as ResolvedBonsoirService;
           final host = service.host?.trim() ?? 'localhost';
-          final port = service.port ?? 8000;
-          final url = 'http://$host:$port';
+          final url = 'http://$host:${service.port}';
           AppLogger.d('DiscoveryService', 'Found server: $url');
           onDiscovered(url);
         }
       });
 
       await _discovery!.start();
-      AppLogger.i('DiscoveryService', 'Scanning for notes.md servers…');
+      AppLogger.i('DiscoveryService', 'Scanning for _notesmd._tcp services…');
     } catch (e) {
       AppLogger.w('DiscoveryService', 'mDNS scan failed: $e');
       _isScanning = false;
